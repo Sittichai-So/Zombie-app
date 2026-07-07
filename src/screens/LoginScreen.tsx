@@ -355,8 +355,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: 70,
-    paddingBottom: 35,
+    paddingTop: 56,
+    paddingBottom: 24,
     paddingHorizontal: 20,
   },
   logoContainer: {
@@ -429,9 +429,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   formContainer: {
-    paddingHorizontal: 30,
-    paddingBottom: 45,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 24,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
+
   inputGroup: {
     marginBottom: 20,
   },
@@ -527,9 +536,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 30,
+    flexWrap: 'wrap',
+    gap: 10,
   },
   oauthButton: {
     flex: 1,
+    minWidth: 90,
     marginHorizontal: 6,
     borderRadius: 14,
     borderWidth: 1,

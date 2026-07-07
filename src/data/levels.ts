@@ -1,3 +1,5 @@
+import { type Difficulty } from '../types';
+
 export interface Level {
   id: number;
   day: number;
@@ -7,7 +9,7 @@ export interface Level {
   description_en: string;
   story_th: string;
   story_en: string;
-  difficulty: 'easy' | 'medium' | 'hard' | 'boss';
+  difficulty: Difficulty;
   questionCount: number;
   timeLimit: number;
   enemyCharacterId: number;
@@ -28,7 +30,7 @@ const generateLevel = (
   description_en: string,
   story_th: string,
   story_en: string,
-  difficulty: 'easy' | 'medium' | 'hard' | 'boss',
+  difficulty: Difficulty,
   questionCount: number,
   timeLimit: number,
   enemyCharacterId: number,

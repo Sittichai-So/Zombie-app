@@ -238,8 +238,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a2e',
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 56,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     backgroundColor: '#16213e',
   },
@@ -262,7 +262,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     justifyContent: 'center',
-    paddingBottom: 20,
+    paddingBottom: 12,
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
   },
   selectedCharacterCard: {
     backgroundColor: '#16213e',
@@ -279,19 +282,22 @@ const styles = StyleSheet.create({
   characterArtContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 16,
   },
   characterArt: {
-    width: Math.min(width * 0.22, 110),
-    height: Math.min(width * 0.22, 110),
-    borderRadius: Math.min(width * 0.11, 55),
+    width: Math.min(width * 0.24, 115),
+    height: Math.min(width * 0.24, 115),
+    borderRadius: Math.min(width * 0.12, 57),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 16,
     backgroundColor: 'rgba(233, 69, 96, 0.1)',
     borderWidth: 2,
     borderColor: '#e94560',
   },
+
   characterArtEmoji: {
     fontSize: Math.min(width * 0.13, 60),
   },
@@ -317,10 +323,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 10,
   },
   statItem: {
     alignItems: 'center',
-    flex: 1,
+    flexBasis: '22%',
+    minWidth: 70,
   },
   statIconBox: {
     width: 40,
@@ -374,10 +383,12 @@ const styles = StyleSheet.create({
     color: '#a0a0a0',
   },
   characterListContainer: {
-    flex: 1,
     backgroundColor: '#1a1a2e',
-    paddingTop: 20,
+    paddingTop: 16,
     paddingBottom: 20,
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
   },
   listTitle: {
     fontSize: 16,
@@ -400,9 +411,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   characterCardInner: {
-    padding: 15,
+    padding: 14,
     alignItems: 'center',
-    width: 140,
+    width: 132,
   },
   characterCardArt: {
     width: 65,

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Character, characters, getCharacterById, calculateStatAtLevel } from '../data/characters';
-import { Level, levels, isLevelUnlocked } from '../data/levels';
+import { getCharacterById, calculateStatAtLevel } from '../data/characters';
+import { type Level, levels } from '../data/levels';
 
 export interface PlayerProfile {
   username: string;
@@ -13,9 +13,9 @@ export interface PlayerProfile {
   completedLevels: number[];
   coins: number;
   gems: number;
-  ownedCharacters: number[]; // character IDs
+  ownedCharacters: number[];
   selectedCharacterId: number;
-  characterLevels: { [key: number]: number }; // characterId -> level
+  characterLevels: { [key: number]: number };
   lastDailyReward: string | null;
   isAuthenticated: boolean;
   settings: {
@@ -26,17 +26,19 @@ export interface PlayerProfile {
   };
 }
 
+interface BattleState {
+  playerHealth: number;
+  enemyHealth: number;
+  currentQuestionIndex: number;
+  timeRemaining: number;
+  correctAnswers: number;
+}
+
 interface GameContextType {
   player: PlayerProfile;
   currentLevel: Level | null;
   isBattleActive: boolean;
-  battleState: {
-    playerHealth: number;
-    enemyHealth: number;
-    currentQuestionIndex: number;
-    timeRemaining: number;
-    correctAnswers: number;
-  };
+  battleState: BattleState;
   updatePlayer: (updates: Partial<PlayerProfile>) => Promise<void>;
   selectCharacter: (characterId: number) => Promise<void>;
   upgradeCharacter: (characterId: number) => Promise<void>;
@@ -51,7 +53,7 @@ interface GameContextType {
   isAuthenticated: boolean;
 }
 
-const defaultPlayer: PlayerProfile = {
+const createInitialPlayer = (): PlayerProfile => ({
   username: 'Player',
   email: '',
   playerLevel: 1,
@@ -61,7 +63,7 @@ const defaultPlayer: PlayerProfile = {
   completedLevels: [],
   coins: 1000,
   gems: 10,
-  ownedCharacters: [1], // Start with Little Zombie
+  ownedCharacters: [1],
   selectedCharacterId: 1,
   characterLevels: { 1: 1 },
   lastDailyReward: null,
@@ -72,41 +74,55 @@ const defaultPlayer: PlayerProfile = {
     notifications: true,
     language: 'th',
   },
-};
+});
+
+const createInitialBattleState = (): BattleState => ({
+  playerHealth: 100,
+  enemyHealth: 100,
+  currentQuestionIndex: 0,
+  timeRemaining: 60,
+  correctAnswers: 0,
+});
+
+const mergePlayerData = (savedData?: Partial<PlayerProfile>): PlayerProfile => ({
+  ...createInitialPlayer(),
+  ...savedData,
+  settings: {
+    ...createInitialPlayer().settings,
+    ...savedData?.settings,
+  },
+  characterLevels: {
+    ...createInitialPlayer().characterLevels,
+    ...(savedData?.characterLevels ?? {}),
+  },
+});
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [player, setPlayer] = useState<PlayerProfile>(defaultPlayer);
+  const [player, setPlayer] = useState<PlayerProfile>(createInitialPlayer);
   const [currentLevel, setCurrentLevel] = useState<Level | null>(null);
   const [isBattleActive, setIsBattleActive] = useState(false);
-  const [battleState, setBattleState] = useState({
-    playerHealth: 100,
-    enemyHealth: 100,
-    currentQuestionIndex: 0,
-    timeRemaining: 60,
-    correctAnswers: 0,
-  });
+  const [battleState, setBattleState] = useState<BattleState>(createInitialBattleState);
 
-  // Load game on mount
   useEffect(() => {
-    loadGame();
+    void loadGame();
   }, []);
 
   const loadGame = async () => {
     try {
       const savedData = await AsyncStorage.getItem('zombieQuizRPG_save');
       const authData = await AsyncStorage.getItem('zombieQuizRPG_auth');
-      
+
       if (savedData) {
-        const parsed = JSON.parse(savedData);
-        setPlayer(parsed);
+        const parsed = JSON.parse(savedData) as Partial<PlayerProfile>;
+        setPlayer(mergePlayerData(parsed));
       }
-      
+
       if (authData) {
-        const auth = JSON.parse(authData);
+        const auth = JSON.parse(authData) as { isAuthenticated?: boolean };
         if (auth.isAuthenticated) {
-          setPlayer(prev => ({ ...prev, isAuthenticated: true }));
+          setPlayer((prev) => ({ ...prev, isAuthenticated: true }));
         }
       }
     } catch (error) {
@@ -131,34 +147,35 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, password: string, username?: string) => {
-    // Simulate login - in real app, this would call auth service
-    const newPlayer = {
+    const nextPlayer = {
       ...player,
       email,
       username: username || player.username,
       isAuthenticated: true,
     };
-    
-    setPlayer(newPlayer);
-    await saveGame(newPlayer);
+
+    setPlayer(nextPlayer);
+    await saveGame(nextPlayer);
     await saveAuth({ email, isAuthenticated: true });
   };
 
   const logout = async () => {
-    const newPlayer = {
+    const nextPlayer = {
       ...player,
       isAuthenticated: false,
     };
-    
-    setPlayer(newPlayer);
-    await saveGame(newPlayer);
+
+    setPlayer(nextPlayer);
+    await saveGame(nextPlayer);
     await AsyncStorage.removeItem('zombieQuizRPG_auth');
   };
 
   const updatePlayer = async (updates: Partial<PlayerProfile>) => {
-    const newPlayer = { ...player, ...updates };
-    setPlayer(newPlayer);
-    await saveGame(newPlayer);
+    setPlayer((prev) => {
+      const nextPlayer = { ...prev, ...updates };
+      void saveGame(nextPlayer);
+      return nextPlayer;
+    });
   };
 
   const selectCharacter = async (characterId: number) => {
@@ -177,19 +194,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const cost = character.upgradeCostPerLevel * currentLevel;
     if (player.coins < cost) return;
 
-    const newCharacterLevels = {
+    const nextCharacterLevels = {
       ...player.characterLevels,
       [characterId]: currentLevel + 1,
     };
 
     await updatePlayer({
       coins: player.coins - cost,
-      characterLevels: newCharacterLevels,
+      characterLevels: nextCharacterLevels,
     });
   };
 
   const startLevel = (levelId: number) => {
-    const level = levels.find(l => l.id === levelId);
+    const level = levels.find((item) => item.id === levelId);
     if (!level) return;
 
     const enemyCharacter = getCharacterById(level.enemyCharacterId);
@@ -215,23 +232,29 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!currentLevel) return;
 
     if (victory) {
-      const newCompletedLevels = player.completedLevels.includes(currentLevel.id)
-        ? player.completedLevels
-        : [...player.completedLevels, currentLevel.id];
+      setPlayer((prev) => {
+        const newCompletedLevels = prev.completedLevels.includes(currentLevel.id)
+          ? prev.completedLevels
+          : [...prev.completedLevels, currentLevel.id];
 
-      const newHighestLevel = Math.max(player.highestLevelCompleted, currentLevel.id);
-      const newExp = player.experience + currentLevel.rewardExp;
-      const newLevel = Math.floor(newExp / 100) + 1;
-      const newCoins = player.coins + currentLevel.rewardCoins;
-      const newScore = player.totalScore + (currentLevel.rewardCoins * 10);
+        const newHighestLevel = Math.max(prev.highestLevelCompleted, currentLevel.id);
+        const newExp = prev.experience + currentLevel.rewardExp;
+        const newLevel = Math.floor(newExp / 100) + 1;
+        const newCoins = prev.coins + currentLevel.rewardCoins;
+        const newScore = prev.totalScore + currentLevel.rewardCoins * 10;
 
-      await updatePlayer({
-        completedLevels: newCompletedLevels,
-        highestLevelCompleted: newHighestLevel,
-        experience: newExp,
-        playerLevel: newLevel,
-        coins: newCoins,
-        totalScore: newScore,
+        const nextPlayer = {
+          ...prev,
+          completedLevels: newCompletedLevels,
+          highestLevelCompleted: newHighestLevel,
+          experience: newExp,
+          playerLevel: newLevel,
+          coins: newCoins,
+          totalScore: newScore,
+        };
+
+        void saveGame(nextPlayer);
+        return nextPlayer;
       });
     }
 
@@ -251,27 +274,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const playerAttack = calculateStatAtLevel(playerCharacter.baseStats.attack, playerCharLevel);
     const enemyDefense = enemyCharacter.baseStats.defense;
 
-    const newCorrectAnswers = isCorrect ? battleState.correctAnswers + 1 : battleState.correctAnswers;
-    
-    // Calculate damage
-    const damage = isCorrect ? Math.max(10, playerAttack - enemyDefense / 2) : 0;
-    const newEnemyHealth = Math.max(0, battleState.enemyHealth - damage);
+    setBattleState((prev) => {
+      const newCorrectAnswers = isCorrect ? prev.correctAnswers + 1 : prev.correctAnswers;
+      const damage = isCorrect ? Math.max(10, playerAttack - enemyDefense / 2) : 0;
+      const newEnemyHealth = Math.max(0, prev.enemyHealth - damage);
 
-    // Enemy counter-attack if wrong
-    let newPlayerHealth = battleState.playerHealth;
-    if (!isCorrect) {
-      const enemyAttack = enemyCharacter.baseStats.attack;
-      const playerDefense = calculateStatAtLevel(playerCharacter.baseStats.defense, playerCharLevel);
-      const counterDamage = Math.max(5, enemyAttack - playerDefense / 2);
-      newPlayerHealth = Math.max(0, battleState.playerHealth - counterDamage);
-    }
+      let newPlayerHealth = prev.playerHealth;
+      if (!isCorrect) {
+        const enemyAttack = enemyCharacter.baseStats.attack;
+        const playerDefense = calculateStatAtLevel(playerCharacter.baseStats.defense, playerCharLevel);
+        const counterDamage = Math.max(5, enemyAttack - playerDefense / 2);
+        newPlayerHealth = Math.max(0, prev.playerHealth - counterDamage);
+      }
 
-    setBattleState({
-      ...battleState,
-      correctAnswers: newCorrectAnswers,
-      enemyHealth: newEnemyHealth,
-      playerHealth: newPlayerHealth,
-      currentQuestionIndex: battleState.currentQuestionIndex + 1,
+      return {
+        ...prev,
+        correctAnswers: newCorrectAnswers,
+        enemyHealth: newEnemyHealth,
+        playerHealth: newPlayerHealth,
+        currentQuestionIndex: prev.currentQuestionIndex + 1,
+      };
     });
   };
 
@@ -287,8 +309,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const resetGame = async () => {
-    setPlayer(defaultPlayer);
-    await saveGame(defaultPlayer);
+    const nextPlayer = createInitialPlayer();
+    setPlayer(nextPlayer);
+    await saveGame(nextPlayer);
   };
 
   return (

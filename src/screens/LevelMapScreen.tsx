@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,13 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { useGame } from '../context/GameContext';
-import { levels, isLevelUnlocked } from '../data/levels';
+import { type Level, levels, isLevelUnlocked } from '../data/levels';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 
 const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
 
-// ---- Design tokens -------------------------------------------------------
-// Escalating danger palette: each zone gets progressively more dangerous
-// as the player moves deeper into the apocalypse. Locked / boss zones read
-// visually distinct so difficulty is legible before you even tap a node.
 const ZONE_THEME = {
   outset: { color: '#6BFF8F', glow: 'rgba(107, 255, 143, 0.16)', icon: '🌱' },
   outbreak: { color: '#FFD93C', glow: 'rgba(255, 217, 60, 0.16)', icon: '🦠' },
@@ -28,14 +26,141 @@ const ZONE_THEME = {
   wasteland: { color: '#FF6B3C', glow: 'rgba(255, 107, 60, 0.16)', icon: '🔥' },
   apocalypse: { color: '#FF3B57', glow: 'rgba(255, 59, 87, 0.18)', icon: '💀' },
   judgment: { color: '#C13BFF', glow: 'rgba(193, 59, 255, 0.22)', icon: '👑' },
-};
+} as const;
+
+type ZoneTheme = (typeof ZONE_THEME)[keyof typeof ZONE_THEME];
+type LevelNodeStatus = 'completed' | 'current' | 'available' | 'locked';
+
+interface ZoneSection {
+  title: string;
+  theme: ZoneTheme;
+  slice: Level[];
+  single: boolean;
+}
+
+interface LevelNodeProps {
+  level: Level;
+  status: LevelNodeStatus;
+  theme: ZoneTheme;
+  nodeSize: number;
+  nodeRadius: number;
+  pulseAnim: Animated.Value;
+  glowAnim: Animated.Value;
+  onPress: (levelId: number) => void;
+}
 
 const LOCKED_COLOR = '#4B5573';
 const GOLD = '#FFCF4D';
 
+const getLevelStatus = (levelId: number, completedLevels: number[]): LevelNodeStatus => {
+  if (completedLevels.includes(levelId)) return 'completed';
+  if (levelId === 1) return 'current';
+  if (isLevelUnlocked(levelId, completedLevels)) return 'available';
+  return 'locked';
+};
+
+const buildZoneSections = (allLevels: Level[]): ZoneSection[] => {
+  const reversedLevels = [...allLevels].reverse();
+
+  return [
+    { title: 'DAY 100 · JUDGMENT DAY', theme: ZONE_THEME.judgment, slice: reversedLevels.slice(0, 1), single: true },
+    { title: 'DAY 81–95 · APOCALYPSE', theme: ZONE_THEME.apocalypse, slice: reversedLevels.slice(1, 5), single: false },
+    { title: 'DAY 61–80 · WASTELAND', theme: ZONE_THEME.wasteland, slice: reversedLevels.slice(5, 9), single: false },
+    { title: 'DAY 41–60 · DEAD ZONE', theme: ZONE_THEME.deadzone, slice: reversedLevels.slice(9, 13), single: false },
+    { title: 'DAY 21–40 · OUTBREAK', theme: ZONE_THEME.outbreak, slice: reversedLevels.slice(13, 17), single: false },
+    { title: 'DAY 1–20 · OUTSET', theme: ZONE_THEME.outset, slice: reversedLevels.slice(17), single: false },
+  ];
+};
+
+const LevelNode: React.FC<LevelNodeProps> = ({
+  level,
+  status,
+  theme,
+  nodeSize,
+  nodeRadius,
+  pulseAnim,
+  glowAnim,
+  onPress,
+}) => {
+  const isBoss = level.difficulty === 'boss';
+  const isLocked = status === 'locked';
+  const ringColor = isLocked ? LOCKED_COLOR : theme.color;
+
+  return (
+    <Animated.View
+      style={[
+        styles.levelNodeWrapper,
+        {
+          transform: [{ scale: status === 'current' ? pulseAnim : 1 }],
+        },
+      ]}
+    >
+      {status === 'current' && (
+        <Animated.View
+          style={[
+            styles.currentGlowRing,
+            {
+              width: nodeSize + 22,
+              height: nodeSize + 22,
+              borderRadius: (nodeSize + 22) / 2,
+              borderColor: theme.color,
+              opacity: glowAnim,
+            },
+          ]}
+        />
+      )}
+
+      <TouchableOpacity
+        style={[
+          styles.levelNode,
+          {
+            width: nodeSize,
+            height: nodeSize,
+            borderRadius: nodeRadius,
+            borderColor: ringColor,
+            backgroundColor: isLocked ? 'rgba(30, 34, 48, 0.9)' : `${theme.color}22`,
+          },
+          isBoss && styles.bossNode,
+        ]}
+        onPress={() => onPress(level.id)}
+        disabled={isLocked}
+        activeOpacity={0.75}
+      >
+        {isLocked ? (
+          <Text style={styles.lockIcon}>🔒</Text>
+        ) : (
+          <>
+            <Text style={styles.nodeEmoji}>{isBoss ? theme.icon : status === 'completed' ? '✅' : theme.icon}</Text>
+            <Text style={[styles.levelNumber, { color: isBoss ? GOLD : '#ffffff' }]}>
+              {isBoss ? 'BOSS' : level.day}
+            </Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      {status === 'completed' && (
+        <View style={styles.completedBadge}>
+          <Text style={styles.completedBadgeText}>★</Text>
+        </View>
+      )}
+
+      <View
+        style={[
+          styles.nodeStatusBar,
+          { backgroundColor: isLocked ? 'rgba(75, 85, 115, 0.25)' : `${ringColor}26` },
+        ]}
+      >
+        <Text style={[styles.nodeStatusText, { color: isLocked ? '#8891ab' : ringColor }]}>
+          {isBoss ? 'FINAL BOSS' : `Day ${level.day}`}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+};
+
 const LevelMapScreen: React.FC = () => {
   const { width, height } = useWindowDimensions();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { player, startLevel } = useGame();
   const levelNodeSize = Math.min(width * 0.2, 92);
   const levelNodeRadius = levelNodeSize / 2;
@@ -46,6 +171,7 @@ const LevelMapScreen: React.FC = () => {
   const [cardScale] = useState(new Animated.Value(0.96));
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.4)).current;
+  const zones = useMemo(() => buildZoneSections(levels), []);
 
   useEffect(() => {
     Animated.parallel([
@@ -94,7 +220,7 @@ const LevelMapScreen: React.FC = () => {
   }, []);
 
   const handleLevelSelect = (levelId: number) => {
-    const level = levels.find(l => l.id === levelId);
+    const level = levels.find((item) => item.id === levelId);
     if (!level) return;
 
     if (!isLevelUnlocked(levelId, player.completedLevels)) {
@@ -111,18 +237,11 @@ const LevelMapScreen: React.FC = () => {
     navigation.navigate('Battle', { levelId });
   };
 
-  const getLevelStatus = (levelId: number) => {
-    if (player.completedLevels.includes(levelId)) return 'completed';
-    if (levelId === 1) return 'current';
-    if (isLevelUnlocked(levelId, player.completedLevels)) return 'available';
-    return 'locked';
-  };
-
-  const renderConnector = (unlocked: boolean, theme: typeof ZONE_THEME.outset) => (
+  const renderConnector = (unlocked: boolean, theme: ZoneTheme) => (
     <View style={styles.connectorTrack}>
-      {[0, 1, 2].map(i => (
+      {[0, 1, 2].map((item) => (
         <View
-          key={i}
+          key={item}
           style={[
             styles.connectorDot,
             { backgroundColor: unlocked ? theme.color : LOCKED_COLOR, opacity: unlocked ? 0.9 : 0.35 },
@@ -131,98 +250,6 @@ const LevelMapScreen: React.FC = () => {
       ))}
     </View>
   );
-
-  const renderLevelNode = (level: any, index: number, theme: typeof ZONE_THEME.outset) => {
-    const status = getLevelStatus(level.id);
-    const isBoss = level.difficulty === 'boss';
-    const isLocked = status === 'locked';
-    const ringColor = isLocked ? LOCKED_COLOR : theme.color;
-    const nodeSize = isBoss ? bossNodeSize : levelNodeSize;
-    const nodeRadius = isBoss ? bossNodeRadius : levelNodeRadius;
-
-    return (
-      <Animated.View
-        key={`${level.id}-${index}`}
-        style={[
-          styles.levelNodeWrapper,
-          {
-            transform: [{ scale: status === 'current' ? pulseAnim : 1 }],
-          },
-        ]}
-      >
-        {status === 'current' && (
-          <Animated.View
-            style={[
-              styles.currentGlowRing,
-              {
-                width: nodeSize + 22,
-                height: nodeSize + 22,
-                borderRadius: (nodeSize + 22) / 2,
-                borderColor: theme.color,
-                opacity: glowAnim,
-              },
-            ]}
-          />
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.levelNode,
-            {
-              width: nodeSize,
-              height: nodeSize,
-              borderRadius: nodeRadius,
-              borderColor: ringColor,
-              backgroundColor: isLocked ? 'rgba(30, 34, 48, 0.9)' : `${theme.color}22`,
-            },
-            isBoss && styles.bossNode,
-          ]}
-          onPress={() => handleLevelSelect(level.id)}
-          disabled={isLocked}
-          activeOpacity={0.75}
-        >
-          {isLocked ? (
-            <Text style={styles.lockIcon}>🔒</Text>
-          ) : (
-            <>
-              <Text style={styles.nodeEmoji}>{isBoss ? theme.icon : status === 'completed' ? '✅' : theme.icon}</Text>
-              <Text style={[styles.levelNumber, { color: isBoss ? GOLD : '#ffffff' }]}>
-                {isBoss ? 'BOSS' : level.day}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {status === 'completed' && (
-          <View style={styles.completedBadge}>
-            <Text style={styles.completedBadgeText}>★</Text>
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.nodeStatusBar,
-            { backgroundColor: isLocked ? 'rgba(75, 85, 115, 0.25)' : `${ringColor}26` },
-          ]}
-        >
-          <Text style={[styles.nodeStatusText, { color: isLocked ? '#8891ab' : ringColor }]}>
-            {isBoss ? 'FINAL BOSS' : `Day ${level.day}`}
-          </Text>
-        </View>
-      </Animated.View>
-    );
-  };
-
-  const reversedLevels = [...levels].reverse();
-
-  const zones = [
-    { title: 'DAY 100 · JUDGMENT DAY', theme: ZONE_THEME.judgment, slice: reversedLevels.slice(0, 1), single: true },
-    { title: 'DAY 81–95 · APOCALYPSE', theme: ZONE_THEME.apocalypse, slice: reversedLevels.slice(1, 5) },
-    { title: 'DAY 61–80 · WASTELAND', theme: ZONE_THEME.wasteland, slice: reversedLevels.slice(5, 9) },
-    { title: 'DAY 41–60 · DEAD ZONE', theme: ZONE_THEME.deadzone, slice: reversedLevels.slice(9, 13) },
-    { title: 'DAY 21–40 · OUTBREAK', theme: ZONE_THEME.outbreak, slice: reversedLevels.slice(13, 17) },
-    { title: 'DAY 1–20 · OUTSET', theme: ZONE_THEME.outset, slice: reversedLevels.slice(17) },
-  ];
 
   return (
     <AnimatedImageBackground
@@ -243,7 +270,6 @@ const LevelMapScreen: React.FC = () => {
             </View>
             <View style={styles.placeholder} />
           </View>
-          
 
           <View style={styles.progressRow}>
             <View style={styles.statCard}>
@@ -279,9 +305,9 @@ const LevelMapScreen: React.FC = () => {
           </View>
 
           <View style={styles.pathContainer}>
-            {zones.map((zone, zi) => {
-              const clearedInZone = zone.slice.filter((l: any) => player.completedLevels.includes(l.id)).length;
-              const zoneUnlocked = zone.slice.some((l: any) => getLevelStatus(l.id) !== 'locked');
+            {zones.map((zone) => {
+              const clearedInZone = zone.slice.filter((level) => player.completedLevels.includes(level.id)).length;
+              const zoneUnlocked = zone.slice.some((level) => getLevelStatus(level.id, player.completedLevels) !== 'locked');
 
               return (
                 <View
@@ -295,7 +321,7 @@ const LevelMapScreen: React.FC = () => {
                     <View style={[styles.zoneStripe, { backgroundColor: zoneUnlocked ? zone.theme.color : LOCKED_COLOR }]} />
                     <Text style={styles.zoneIcon}>{zone.theme.icon}</Text>
                     <View style={styles.zoneTitleBlock}>
-                      <Text style={[styles.windingSectionTitle, { color: zoneUnlocked ? zone.theme.color : '#8891ab' }]}>
+                      <Text style={[styles.windingSectionTitle, { color: zoneUnlocked ? zone.theme.color : '#8891ab' }]}> 
                         {zone.title}
                       </Text>
                       <Text style={styles.zoneProgressText}>{clearedInZone}/{zone.slice.length} cleared</Text>
@@ -304,19 +330,51 @@ const LevelMapScreen: React.FC = () => {
 
                   {zone.single ? (
                     <View style={styles.windingNodeContainer}>
-                      {zone.slice.map((level: any, index: number) => renderLevelNode(level, index, zone.theme))}
+                      {zone.slice.map((level, index) => {
+                        const status = getLevelStatus(level.id, player.completedLevels);
+                        const nodeSize = level.difficulty === 'boss' ? bossNodeSize : levelNodeSize;
+                        const nodeRadius = level.difficulty === 'boss' ? bossNodeRadius : levelNodeRadius;
+
+                        return (
+                          <LevelNode
+                            key={`${level.id}-${index}`}
+                            level={level}
+                            status={status}
+                            theme={zone.theme}
+                            nodeSize={nodeSize}
+                            nodeRadius={nodeRadius}
+                            pulseAnim={pulseAnim}
+                            glowAnim={glowAnim}
+                            onPress={handleLevelSelect}
+                          />
+                        );
+                      })}
                     </View>
                   ) : (
                     <View style={styles.windingPath}>
-                      {zone.slice.map((level: any, index: number) => (
-                        <React.Fragment key={level.id}>
-                          <View style={[styles.windingNodeWrapper, index % 2 === 0 ? styles.left : styles.right]}>
-                            {renderLevelNode(level, index, zone.theme)}
-                          </View>
-                          {index < zone.slice.length - 1 &&
-                            renderConnector(getLevelStatus(level.id) !== 'locked', zone.theme)}
-                        </React.Fragment>
-                      ))}
+                      {zone.slice.map((level, index) => {
+                        const status = getLevelStatus(level.id, player.completedLevels);
+                        const nodeSize = level.difficulty === 'boss' ? bossNodeSize : levelNodeSize;
+                        const nodeRadius = level.difficulty === 'boss' ? bossNodeRadius : levelNodeRadius;
+
+                        return (
+                          <React.Fragment key={level.id}>
+                            <View style={[styles.windingNodeWrapper, index % 2 === 0 ? styles.left : styles.right]}>
+                              <LevelNode
+                                level={level}
+                                status={status}
+                                theme={zone.theme}
+                                nodeSize={nodeSize}
+                                nodeRadius={nodeRadius}
+                                pulseAnim={pulseAnim}
+                                glowAnim={glowAnim}
+                                onPress={handleLevelSelect}
+                              />
+                            </View>
+                            {index < zone.slice.length - 1 && renderConnector(status !== 'locked', zone.theme)}
+                          </React.Fragment>
+                        );
+                      })}
                     </View>
                   )}
                 </View>

@@ -244,8 +244,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,
+    paddingTop: 56,
+    paddingBottom: 12,
     backgroundColor: '#16213e',
   },
   backButton: {
@@ -275,8 +275,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 80,
+    maxWidth: 760,
+    width: '100%',
+    alignSelf: 'center',
   },
   profileCard: {
     backgroundColor: 'rgba(233, 69, 96, 0.08)',
