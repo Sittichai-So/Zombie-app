@@ -10,10 +10,14 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { getCharacterById } from '../data/characters';
 import { levels } from '../data/levels';
+import Mascot from '../components/Mascot';
+import Card from '../components/Card';
+import Button from '../components/Button';
 
 const { width } = Dimensions.get('window');
 import { quizQuestions, Question } from '../data/quizQuestions';
@@ -275,15 +279,22 @@ const BattleScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Sci-fi Battle Header */}
-      <View style={styles.battleHeader}>
+      {/* Gradient Battle Header */}
+      <LinearGradient
+        colors={['rgba(233, 69, 96, 0.2)', 'rgba(22, 33, 62, 0.95)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.battleHeader}
+      >
         <View style={styles.headerLeft}>
-          <View style={styles.timerBox}>
-            <Text style={styles.timerIcon}>⏱️</Text>
-            <Text style={[styles.timerText, { color: battleState.timeRemaining < 10 ? '#ff0000' : '#00ff88' }]}>
-              {battleState.timeRemaining}s
-            </Text>
-          </View>
+          <Card variant="danger" size="small">
+            <View style={styles.timerBox}>
+              <Text style={styles.timerIcon}>⏱️</Text>
+              <Text style={[styles.timerText, { color: battleState.timeRemaining < 10 ? '#ff4757' : '#2ed573' }]}>
+                {battleState.timeRemaining}s
+              </Text>
+            </View>
+          </Card>
         </View>
         <View style={styles.headerCenter}>
           <View style={styles.questionCounter}>
@@ -294,14 +305,16 @@ const BattleScreen: React.FC = () => {
           </View>
         </View>
         <View style={styles.headerRight}>
-          <View style={styles.damageIndicator}>
-            <Text style={styles.damageIcon}>💀</Text>
-            <Text style={styles.damageText}>{playerCharacter.baseStats.attack}</Text>
-          </View>
+          <Card variant="danger" size="small">
+            <View style={styles.damageIndicator}>
+              <Text style={styles.damageIcon}>💀</Text>
+              <Text style={styles.damageText}>{playerCharacter.baseStats.attack}</Text>
+            </View>
+          </Card>
         </View>
-      </View>
+      </LinearGradient>
 
-      {/* Post-apocalyptic Battle Arena */}
+      {/* Battle Arena with Mascot */}
       <ScrollView 
         style={[styles.arenaScroll, Platform.OS === 'web' && { minHeight: '100%' }]} 
         showsVerticalScrollIndicator={true}
@@ -310,7 +323,21 @@ const BattleScreen: React.FC = () => {
         bounces={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.arena}>
+        {/* Mascot Battle Guidance */}
+        <View style={styles.mascotBattleSection}>
+          <Mascot 
+            emotion={showCombo && comboCount > 2 ? "excited" : showDamage ? "happy" : battleState.playerHealth < playerMaxHealth * 0.3 ? "worried" : "thinking"}
+            size="medium"
+            message={showCombo && comboCount > 2 ? `🔥 ${comboCount}x COMBO!` : showDamage ? "โจมตี!" : battleState.playerHealth < playerMaxHealth * 0.3 ? "ระวัง!" : "สู้ๆ!"}
+          />
+        </View>
+
+        <LinearGradient
+          colors={['rgba(45, 27, 78, 0.9)', 'rgba(26, 26, 46, 0.85)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.arena}
+        >
           {/* Player Side - Left */}
           <View style={styles.fighterLeft}>
             <View style={styles.playerInfo}>
@@ -320,19 +347,25 @@ const BattleScreen: React.FC = () => {
               <Text style={styles.fighterLevel}>Lv.{playerCharLevel}</Text>
             </View>
             
-            {/* Sci-fi Health Bar */}
+            {/* Gradient Health Bar */}
             <View style={styles.healthBarWrapper}>
               <View style={styles.healthBarBg}>
-                <View 
+                <LinearGradient
+                  colors={
+                    playerHealthPercent > 0.6 
+                      ? ['#2ed573', '#7bed9f'] 
+                      : playerHealthPercent > 0.3 
+                      ? ['#ffa502', '#ff7f50'] 
+                      : ['#ff4757', '#ff6b81']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={[
                     styles.healthBarFill,
-                    styles.playerHealthFill,
                     { 
                       width: `${Math.max(0, playerHealthPercent * 100)}%`,
-                      backgroundColor: playerHealthPercent > 0.6 ? '#00ff88' : playerHealthPercent > 0.3 ? '#ffaa00' : '#ff0000',
-                      shadowColor: playerHealthPercent > 0.6 ? '#00ff88' : playerHealthPercent > 0.3 ? '#ffaa00' : '#ff0000',
                     }
-                  ]} 
+                  ]}
                 />
               </View>
               <View style={styles.healthStats}>
@@ -376,19 +409,25 @@ const BattleScreen: React.FC = () => {
               </Text>
             </View>
             
-            {/* Enemy Health Bar */}
+            {/* Enemy Gradient Health Bar */}
             <View style={styles.healthBarWrapper}>
               <View style={styles.healthBarBg}>
-                <View 
+                <LinearGradient
+                  colors={
+                    enemyHealthPercent > 0.6 
+                      ? ['#2ed573', '#7bed9f'] 
+                      : enemyHealthPercent > 0.3 
+                      ? ['#ffa502', '#ff7f50'] 
+                      : ['#ff4757', '#ff6b81']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={[
                     styles.healthBarFill,
-                    styles.enemyHealthFill,
                     { 
                       width: `${Math.max(0, enemyHealthPercent * 100)}%`,
-                      backgroundColor: enemyHealthPercent > 0.6 ? '#00ff88' : enemyHealthPercent > 0.3 ? '#ffaa00' : '#ff0000',
-                      shadowColor: enemyHealthPercent > 0.6 ? '#00ff88' : enemyHealthPercent > 0.3 ? '#ffaa00' : '#ff0000',
                     }
-                  ]} 
+                  ]}
                 />
               </View>
               <View style={styles.healthStats}>
@@ -408,33 +447,43 @@ const BattleScreen: React.FC = () => {
               </View>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
-        {/* Sci-fi Question Zone */}
+        {/* Gradient Question Zone */}
         <View style={styles.questionZone}>
-          <View style={styles.questionPanel}>
-            <View style={styles.questionHeader}>
-              <View style={[styles.categoryBadge, {
-                backgroundColor: currentQuestion && currentQuestion.difficulty === 'hard' ? '#ff6600' :
-                                currentQuestion && currentQuestion.difficulty === 'medium' ? '#ffaa00' : '#00ff88'
-              }]}>
-                <Text style={styles.categoryText}>{currentQuestion && currentQuestion.category}</Text>
+          <Card variant="primary">
+            <View style={styles.questionPanel}>
+              <View style={styles.questionHeader}>
+                <LinearGradient
+                  colors={
+                    currentQuestion && currentQuestion.difficulty === 'hard' 
+                      ? ['#ff6b35', '#ff8c42'] 
+                      : currentQuestion && currentQuestion.difficulty === 'medium'
+                      ? ['#ffa502', '#ffc048']
+                      : ['#2ed573', '#7bed9f']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.categoryBadge}
+                >
+                  <Text style={styles.categoryText}>{currentQuestion && currentQuestion.category}</Text>
+                </LinearGradient>
+                <Text style={styles.difficultyLabel}>
+                  {currentQuestion && currentQuestion.difficulty === 'hard' ? '🔥 HARD' :
+                   currentQuestion && currentQuestion.difficulty === 'medium' ? '⚡ MEDIUM' : '📚 EASY'}
+                </Text>
               </View>
-              <Text style={styles.difficultyLabel}>
-                {currentQuestion && currentQuestion.difficulty === 'hard' ? '🔥 HARD' :
-                 currentQuestion && currentQuestion.difficulty === 'medium' ? '⚡ MEDIUM' : '📚 EASY'}
-              </Text>
+              
+              <View style={styles.questionContent}>
+                <Text style={styles.questionMark}>❓</Text>
+                <Text style={styles.questionTextMain}>
+                  {currentQuestion && (i18n.language === 'th' ? currentQuestion.question_th : currentQuestion.question_en)}
+                </Text>
+              </View>
             </View>
-            
-            <View style={styles.questionContent}>
-              <Text style={styles.questionMark}>❓</Text>
-              <Text style={styles.questionTextMain}>
-                {currentQuestion && (i18n.language === 'th' ? currentQuestion.question_th : currentQuestion.question_en)}
-              </Text>
-            </View>
-          </View>
+          </Card>
 
-          {/* Answer Buttons */}
+          {/* Gradient Answer Buttons */}
           <View style={styles.answersGrid}>
             {currentQuestion && currentQuestion.options_th.map((option, index) => {
               const isSelected = selectedAnswer === index;
@@ -454,29 +503,44 @@ const BattleScreen: React.FC = () => {
                   disabled={showResult}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.answerContent}>
-                    <View style={[
-                      styles.answerLetter,
-                      isSelected && styles.answerLetterSelected,
-                      isCorrect && styles.answerLetterCorrect,
-                      isWrong && styles.answerLetterWrong,
-                    ]}>
-                      <Text style={styles.letterText}>
-                        {String.fromCharCode(65 + index)}
+                  <LinearGradient
+                    colors={
+                      isCorrect
+                        ? ['#2ed573', '#7bed9f']
+                        : isWrong
+                        ? ['#ff4757', '#ff6b81']
+                        : isSelected
+                        ? ['#a55eea', '#8854d0']
+                        : ['rgba(22, 33, 62, 0.9)', 'rgba(15, 52, 96, 0.8)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.answerGradient}
+                  >
+                    <View style={styles.answerContent}>
+                      <View style={[
+                        styles.answerLetter,
+                        isSelected && styles.answerLetterSelected,
+                        isCorrect && styles.answerLetterCorrect,
+                        isWrong && styles.answerLetterWrong,
+                      ]}>
+                        <Text style={styles.letterText}>
+                          {String.fromCharCode(65 + index)}
+                        </Text>
+                      </View>
+                      <Text style={[
+                        styles.answerText,
+                        isCorrect && styles.answerTextCorrect,
+                      ]} numberOfLines={3}>
+                        {i18n.language === 'th' 
+                          ? currentQuestion && currentQuestion.options_th[index] 
+                          : currentQuestion && currentQuestion.options_en[index]
+                        }
                       </Text>
                     </View>
-                    <Text style={[
-                      styles.answerText,
-                      isCorrect && styles.answerTextCorrect,
-                    ]} numberOfLines={3}>
-                      {i18n.language === 'th' 
-                        ? currentQuestion && currentQuestion.options_th[index] 
-                        : currentQuestion && currentQuestion.options_en[index]
-                      }
-                    </Text>
-                  </View>
-                  {isCorrect && <Text style={styles.correctIcon}>✅</Text>}
-                  {isWrong && <Text style={styles.wrongIcon}>❌</Text>}
+                    {isCorrect && <Text style={styles.correctIcon}>✅</Text>}
+                    {isWrong && <Text style={styles.wrongIcon}>❌</Text>}
+                  </LinearGradient>
                 </TouchableOpacity>
               );
             })}
@@ -484,54 +548,53 @@ const BattleScreen: React.FC = () => {
 
           {/* Result Popup */}
           {showResult && (
-            <Animated.View style={[
-              styles.resultPopup,
-              { 
-                backgroundColor: isCorrect ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 0, 0, 0.15)',
-                borderColor: isCorrect ? '#00ff88' : '#ff0000',
-              }
-            ]}>
-              <View style={styles.resultContent}>
-                <Text style={[
-                  styles.resultEmoji,
-                ]}>{isCorrect ? '🎯' : '💥'}</Text>
-                <Text style={[
-                  styles.resultTitle,
-                  { color: isCorrect ? '#00ff88' : '#ff0000' }
-                ]}>
-                  {isCorrect ? 'CORRECT!' : 'WRONG!'}
-                </Text>
-                <Text style={styles.resultSubtitle}>
-                  {isCorrect ? '+Damage to Enemy' : '-Damage Taken'}
-                </Text>
-              </View>
+            <Animated.View style={styles.resultPopupContainer}>
+              <Card variant={isCorrect ? 'success' : 'danger'}>
+                <View style={styles.resultContent}>
+                  <Text style={styles.resultEmoji}>{isCorrect ? '🎯' : '💥'}</Text>
+                  <Text style={[
+                    styles.resultTitle,
+                    { color: isCorrect ? '#2ed573' : '#ff4757' }
+                  ]}>
+                    {isCorrect ? 'CORRECT!' : 'WRONG!'}
+                  </Text>
+                  <Text style={styles.resultSubtitle}>
+                    {isCorrect ? '+Damage to Enemy' : '-Damage Taken'}
+                  </Text>
+                </View>
+              </Card>
             </Animated.View>
           )}
         </View>
       </ScrollView>
 
-      {/* Battle Footer Stats */}
-      <View style={styles.battleFooter}>
+      {/* Gradient Battle Footer */}
+      <LinearGradient
+        colors={['rgba(22, 33, 62, 0.95)', 'rgba(15, 52, 96, 0.9)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.battleFooter}
+      >
         <View style={styles.footerStats}>
           <View style={styles.statItem}>
             <Text style={styles.statIconLarge}>✅</Text>
             <Text style={styles.statLabel}>CORRECT</Text>
-            <Text style={[styles.statValue, { color: '#00ff88' }]}>{battleState.correctAnswers}</Text>
+            <Text style={[styles.statValue, { color: '#2ed573' }]}>{battleState.correctAnswers}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statIconLarge}>❌</Text>
             <Text style={styles.statLabel}>WRONG</Text>
-            <Text style={[styles.statValue, { color: '#ff0000' }]}>{level ? (battleState.correctAnswers === 0 ? level.questionCount : level.questionCount - battleState.correctAnswers) : 0}</Text>
+            <Text style={[styles.statValue, { color: '#ff4757' }]}>{level ? (battleState.correctAnswers === 0 ? level.questionCount : level.questionCount - battleState.correctAnswers) : 0}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statIconLarge}>⚡</Text>
             <Text style={styles.statLabel}>POWER</Text>
-            <Text style={[styles.statValue, { color: '#ffaa00' }]}>{playerCharacter ? playerCharacter.baseStats.attack : 0}</Text>
+            <Text style={[styles.statValue, { color: '#ffa502' }]}>{playerCharacter ? playerCharacter.baseStats.attack : 0}</Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 };
@@ -585,7 +648,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 15,
   },
-  // Sci-fi Header
+  // Gradient Header
   battleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -593,10 +656,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 50,
     paddingBottom: 15,
-    backgroundColor: '#16213e',
-    borderBottomWidth: 2,
-    borderBottomColor: '#e94560',
-    shadowColor: '#e94560',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#a55eea',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -616,12 +678,8 @@ const styles = StyleSheet.create({
   timerBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(233, 69, 96, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e94560',
   },
   timerIcon: {
     fontSize: 18,
@@ -652,12 +710,8 @@ const styles = StyleSheet.create({
   damageIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(233, 69, 96, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e94560',
   },
   damageIcon: {
     fontSize: 18,
@@ -668,7 +722,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#e94560',
   },
-  // Post-apocalyptic Arena
+  // Battle Arena
   arenaScroll: {
     flex: 1,
     width: '100%',
@@ -676,13 +730,24 @@ const styles = StyleSheet.create({
   arenaScrollContent: {
     paddingBottom: 100,
   },
+  mascotBattleSection: {
+    padding: 15,
+    alignItems: 'center',
+  },
   arena: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: 15,
-    backgroundColor: 'rgba(22, 33, 62, 0.8)',
+    padding: 20,
     minHeight: 280,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   fighterLeft: {
     flex: 1,
@@ -724,33 +789,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 1,
   },
-  // Sci-fi Health Bars
+  // Gradient Health Bars
   healthBarWrapper: {
     width: '100%',
     marginBottom: 15,
   },
   healthBarBg: {
-    height: 16,
-    backgroundColor: '#0f3460',
-    borderRadius: 8,
+    height: 18,
+    backgroundColor: 'rgba(15, 52, 96, 0.8)',
+    borderRadius: 9,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#e94560',
+    borderColor: 'rgba(168, 85, 247, 0.4)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   healthBarFill: {
     height: '100%',
-    borderRadius: 8,
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  playerHealthFill: {
-    shadowColor: '#e94560',
-  },
-  enemyHealthFill: {
-    shadowColor: '#ff6b6b',
+    borderRadius: 9,
   },
   healthStats: {
     flexDirection: 'row',
@@ -782,20 +841,20 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   playerFrame: {
-    backgroundColor: 'rgba(233, 69, 96, 0.08)',
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
     borderWidth: 3,
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
+    borderColor: '#a55eea',
+    shadowColor: '#a55eea',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 15,
     elevation: 10,
   },
   enemyFrame: {
-    backgroundColor: 'rgba(255, 107, 107, 0.08)',
+    backgroundColor: 'rgba(255, 107, 107, 0.15)',
     borderWidth: 3,
-    borderColor: '#ff6b6b',
-    shadowColor: '#ff6b6b',
+    borderColor: '#ff6b81',
+    shadowColor: '#ff6b81',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 15,
@@ -840,19 +899,19 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(233, 69, 96, 0.2)',
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
+    borderColor: '#a55eea',
+    shadowColor: '#a55eea',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 8,
   },
   vsText: {
-    color: '#e94560',
+    color: '#a55eea',
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 2,
@@ -864,20 +923,9 @@ const styles = StyleSheet.create({
   // Question Zone
   questionZone: {
     padding: 15,
-    backgroundColor: 'rgba(15, 52, 96, 0.8)',
   },
   questionPanel: {
-    backgroundColor: 'rgba(22, 33, 62, 0.95)',
-    borderRadius: 20,
     padding: 20,
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
   },
   questionHeader: {
     flexDirection: 'row',
@@ -918,33 +966,34 @@ const styles = StyleSheet.create({
   },
   // Answer Grid
   answersGrid: {
-    gap: 10,
+    gap: 12,
   },
   answerButton: {
-    backgroundColor: 'rgba(22, 33, 62, 0.9)',
     borderRadius: 15,
+    padding: 2,
+    marginBottom: 12,
+  },
+  answerGradient: {
+    borderRadius: 13,
     padding: 15,
-    borderWidth: 2,
-    borderColor: '#3a5070',
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 2 },
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 6,
+    elevation: 5,
   },
   answerSelected: {
-    borderColor: '#e94560',
-    backgroundColor: 'rgba(233, 69, 96, 0.15)',
+    borderColor: '#a55eea',
   },
   answerCorrect: {
-    borderColor: '#2ecc71',
-    backgroundColor: 'rgba(46, 204, 113, 0.2)',
+    borderColor: '#2ed573',
   },
   answerWrong: {
-    borderColor: '#e74c3c',
-    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+    borderColor: '#ff4757',
   },
   answerContent: {
     flexDirection: 'row',
@@ -955,24 +1004,24 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
     borderRadius: 17,
-    backgroundColor: 'rgba(233, 69, 96, 0.1)',
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
     borderWidth: 2,
-    borderColor: '#e94560',
+    borderColor: '#a55eea',
   },
   answerLetterSelected: {
-    borderColor: '#e94560',
-    backgroundColor: 'rgba(233, 69, 96, 0.3)',
+    borderColor: '#a55eea',
+    backgroundColor: 'rgba(168, 85, 247, 0.4)',
   },
   answerLetterCorrect: {
-    borderColor: '#2ecc71',
-    backgroundColor: '#2ecc71',
+    borderColor: '#2ed573',
+    backgroundColor: '#2ed573',
   },
   answerLetterWrong: {
-    borderColor: '#e74c3c',
-    backgroundColor: '#e74c3c',
+    borderColor: '#ff4757',
+    backgroundColor: '#ff4757',
   },
   letterText: {
     color: '#ffffff',
@@ -998,16 +1047,8 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   // Result Popup
-  resultPopup: {
+  resultPopupContainer: {
     marginTop: 15,
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 2,
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
   },
   resultContent: {
     alignItems: 'center',
@@ -1028,10 +1069,14 @@ const styles = StyleSheet.create({
   },
   // Battle Footer
   battleFooter: {
-    backgroundColor: '#16213e',
-    borderTopWidth: 2,
-    borderTopColor: '#e94560',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     paddingBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   footerStats: {
     flexDirection: 'row',

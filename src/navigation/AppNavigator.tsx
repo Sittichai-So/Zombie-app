@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import LoginScreen from '../screens/LoginScreen';
 import CharacterSelectScreen from '../screens/CharacterSelectScreen';
 import HomeScreen from '../screens/HomeScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
 import LevelMapScreen from '../screens/LevelMapScreen';
 import BattleScreen from '../screens/BattleScreen';
 import CharactersScreen from '../screens/CharactersScreen';
@@ -17,8 +18,9 @@ export type RootStackParamList = {
   Login: undefined;
   CharacterSelect: undefined;
   Home: undefined;
-  LevelMap: undefined;
-  Battle: { levelId: number };
+  Categories: undefined;
+  LevelMap: { categoryId?: string };
+  Battle: { levelId: number; categoryId?: string };
   Characters: undefined;
   Shop: undefined;
   Profile: undefined;
@@ -66,6 +68,14 @@ const AppNavigator: React.FC = () => {
           component={HomeScreen}
           options={{
             title: 'หน้าหลัก',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Categories"
+          component={CategoriesScreen}
+          options={{
+            title: 'หมวดหมู่ข้อสอบ',
             headerShown: false,
           }}
         />

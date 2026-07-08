@@ -1,4 +1,5 @@
 import { type Difficulty } from '../types';
+import { examLevels } from './examLevels';
 
 export interface Level {
   id: number;
@@ -18,6 +19,10 @@ export interface Level {
   requiredLevel: number;
   isLocked: boolean;
   backgroundUri: string;
+  category?: string;
+  title?: string;
+  title_th?: string;
+  title_en?: string;
 }
 
 // Helper function to generate levels
@@ -57,7 +62,9 @@ const generateLevel = (
   backgroundUri: `assets/images/backgrounds/day${day}.png`
 });
 
+// Combine original levels with exam levels
 export const levels: Level[] = [
+  // Original zombie survival levels
   // Day 1-10: Survival Beginning (Easy)
   generateLevel(1, 1, 'Day 1: การเริ่มต้น', 'Day 1: The Beginning',
     'วันแรกของการเอาชีวิตรอด ซอมบี้ตัวแรกปรากฏขึ้น!', 'First day of survival. The first zombie appears!',
@@ -87,7 +94,7 @@ export const levels: Level[] = [
   // Day 11-20: Building Strength (Easy-Medium)
   generateLevel(6, 12, 'Day 12: ฝึกฝน', 'Day 12: Training',
     'เวลาฝึกฝนทักษะการต่อสู้', 'Time to train fighting skills',
-    'ยิ่งฝึก越强 ยิ่งอยู่รอด', 'The more you train, the stronger you get',
+    'ยิ่งฝึกยิ่งแข็งแกร่ง ยิ่งฝึกยิ่งอยู่รอด', 'The more you train, the stronger you get',
     'easy', 6, 70, 2, 200, 100, 6),
   
   generateLevel(7, 15, 'Day 15: ทีมงาน', 'Day 15: The Team',
@@ -188,6 +195,61 @@ export const levels: Level[] = [
     'วันสุดท้ายของการเอาชีวิตรอด', 'Last day of survival',
     'คุณคือความหวังสุดท้ายของมนุษย์!', 'You are humanity\'s last hope!',
     'boss', 20, 300, 11, 5000, 2000, 42),
+  
+  // Add exam levels
+  ...examLevels.map(level => ({
+    id: level.id,
+    day: level.day,
+
+    name_th: level.title_th || level.title || '',
+    name_en: level.title_en || level.title || '',
+
+    title: level.title,
+    title_th: level.title_th,
+    title_en: level.title_en,
+
+    description_th: '',
+    description_en: '',
+
+    story_th: '',
+    story_en: '',
+
+    difficulty: level.difficulty,
+
+    questionCount: level.questionCount,
+    timeLimit: level.timeLimit,
+
+    // แปลง enemy id จาก string เป็น number
+    enemyCharacterId: (() => {
+        switch (String(level.enemyCharacterId)) {
+            case 'zombie1':
+                return 1;
+            case 'zombie2':
+                return 2;
+            case 'zombie3':
+                return 3;
+            case 'zombie4':
+                return 4;
+            case 'zombie5':
+                return 5;
+            case 'zombie_boss':
+                return 6;
+            default:
+                return 1;
+        }
+    })(),
+
+    rewardCoins: level.rewardCoins,
+    rewardExp: level.rewardExp,
+
+    requiredLevel: level.requiredLevel,
+
+    isLocked: true,
+
+    backgroundUri: `assets/images/backgrounds/exam/${level.category}.png`,
+
+    category: level.category,
+})),
 ];
 
 export const isLevelUnlocked = (levelId: number, completedLevels: number[]): boolean => {
@@ -201,4 +263,20 @@ export const getLevelByDay = (day: number): Level | undefined => {
 
 export const getTotalDays = (): number => {
   return levels.length;
+};
+
+// Get levels by category
+export const getLevelsByCategory = (categoryId: string): Level[] => {
+  return levels.filter(level => level.category === categoryId);
+};
+
+// Get all categories
+export const getCategories = () => {
+  const categories = new Set<string>();
+  levels.forEach(level => {
+    if (level.category) {
+      categories.add(level.category);
+    }
+  });
+  return Array.from(categories);
 };

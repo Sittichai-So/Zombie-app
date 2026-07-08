@@ -1,15 +1,17 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'success';
+  variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'mascot';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
   icon?: string;
   style?: any;
+  gradient?: boolean;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -21,19 +23,22 @@ const Button: React.FC<ButtonProps> = ({
   loading = false,
   icon,
   style,
+  gradient = true,
 }) => {
-  const getVariantStyle = () => {
+  const getVariantColors = () => {
     switch (variant) {
       case 'primary':
-        return styles.primary;
+        return ['#6366F1', '#8B5CF6'];
       case 'secondary':
-        return styles.secondary;
+        return ['#06B6D4', '#3B82F6'];
       case 'danger':
-        return styles.danger;
+        return ['#F87171', '#FCA5A5'];
       case 'success':
-        return styles.success;
+        return ['#84CC16', '#A3E635'];
+      case 'mascot':
+        return ['#C084FC', '#E9B5FA'];
       default:
-        return styles.primary;
+        return ['#6366F1', '#8B5CF6'];
     }
   };
 
@@ -50,19 +55,8 @@ const Button: React.FC<ButtonProps> = ({
     }
   };
 
-  return (
-    <TouchableOpacity
-      style={[
-        styles.button,
-        getVariantStyle(),
-        getSizeStyle(),
-        disabled && styles.disabled,
-        style,
-      ]}
-      onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.7}
-    >
+  const buttonContent = (
+    <>
       {loading ? (
         <ActivityIndicator color="#ffffff" />
       ) : (
@@ -70,6 +64,44 @@ const Button: React.FC<ButtonProps> = ({
           {icon && <Text style={styles.icon}>{icon}</Text>}
           <Text style={styles.text}>{title}</Text>
         </>
+      )}
+    </>
+  );
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.8}
+      style={style}
+    >
+      {gradient ? (
+        <LinearGradient
+          colors={getVariantColors()}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[
+            styles.button,
+            getSizeStyle(),
+            disabled && styles.disabled,
+          ]}
+        >
+          {buttonContent}
+        </LinearGradient>
+      ) : (
+        <View
+          style={[
+            styles.button,
+            getSizeStyle(),
+            variant === 'primary' && styles.primaryFlat,
+            variant === 'secondary' && styles.secondaryFlat,
+            variant === 'danger' && styles.dangerFlat,
+            variant === 'success' && styles.successFlat,
+            disabled && styles.disabled,
+          ]}
+        >
+          {buttonContent}
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -80,21 +112,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 20,
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  primary: {
+  primaryFlat: {
     backgroundColor: '#e94560',
   },
-  secondary: {
+  secondaryFlat: {
     backgroundColor: '#0f3460',
     borderWidth: 2,
     borderColor: '#e94560',
   },
-  danger: {
+  dangerFlat: {
     backgroundColor: '#ef4444',
   },
-  success: {
+  successFlat: {
     backgroundColor: '#22c55e',
   },
   small: {

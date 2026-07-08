@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Image,
   ScrollView,
   Animated,
   ActivityIndicator,
@@ -13,14 +12,13 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const { login } = useGame();
-  
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,21 +26,20 @@ const LoginScreen: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const fadeAnim = useState(new Animated.Value(0))[0];
-  const slideAnim = useState(new Animated.Value(50))[0];
+  const slideAnim = useState(new Animated.Value(24))[0];
 
   React.useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 500,
         useNativeDriver: Platform.OS !== 'web',
       }),
-      Animated.spring(slideAnim, {
+      Animated.timing(slideAnim, {
         toValue: 0,
-        tension: 50,
-        friction: 7,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start();
@@ -53,12 +50,11 @@ const LoginScreen: React.FC = () => {
       setError(t('login.error.required'));
       return;
     }
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
-      // Simulate login - in real app, this would call auth service
       await login(email, password);
       navigation.replace('CharacterSelect');
     } catch (err) {
@@ -73,22 +69,21 @@ const LoginScreen: React.FC = () => {
       setError(t('login.error.required'));
       return;
     }
-    
+
     if (password !== confirmPassword) {
       setError(t('login.error.passwordMismatch'));
       return;
     }
-    
+
     if (password.length < 6) {
       setError(t('login.error.passwordTooShort'));
       return;
     }
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
-      // Simulate registration
       await login(email, password, username);
       navigation.replace('CharacterSelect');
     } catch (err) {
@@ -101,9 +96,8 @@ const LoginScreen: React.FC = () => {
   const handleOAuthLogin = async (provider: string) => {
     setLoading(true);
     setError('');
-    
+
     try {
-      // Simulate OAuth login
       await login(`${provider}_user@example.com`, 'oauth', provider);
       navigation.replace('CharacterSelect');
     } catch (err) {
@@ -114,495 +108,399 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView 
-      style={[styles.container, Platform.OS === 'web' && { minHeight: '100%' }]} 
-      showsVerticalScrollIndicator={true}
-      contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }, Platform.OS === 'web' && { minHeight: '100%' }, Platform.OS === 'web' && { paddingBottom: 50 }]}
-      nestedScrollEnabled={Platform.OS !== 'web'}
-      bounces={true}
+    <ScrollView
+      style={[styles.container, Platform.OS === 'web' && { minHeight: '100%' }]}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { flexGrow: 1 },
+        Platform.OS === 'web' && { minHeight: '100%' },
+      ]}
       keyboardShouldPersistTaps="handled"
     >
-      <LinearGradient
-        colors={['#1a1a2e', '#16213e', '#0f3460']}
-        style={styles.gradient}
+      {/* Header */}
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
       >
-        {/* Background Decorative Elements - Modern Survival Theme */}
-        <View style={styles.backgroundDecoration1} />
-        <View style={styles.backgroundDecoration2} />
-        
-        {/* Logo and Title */}
-        <Animated.View 
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <View style={styles.logoContainer}>
-            <View style={styles.logoGlow}>
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoEmoji}>🧟</Text>
-              </View>
-              <View style={styles.logoRing} />
-            </View>
+        <View style={styles.logoRow}>
+          <View style={styles.logoMark}>
+            <Text style={styles.logoMarkText}>🧟</Text>
           </View>
-          <Text style={styles.title}>ZOMBIE QUIZ RPG</Text>
-          <Text style={styles.subtitle}>
-            {isLogin ? '🎮 เอาชีวิตรอดจากซอมบี้' : '⚔️ ร่วมต่อสู้ในโลกอันตราย'}
-          </Text>
-          <View style={styles.warningBanner}>
-            <Text style={styles.warningText}>🔥 SURVIVAL MODE</Text>
+          <View style={styles.statusPill}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusPillText}>SURVIVAL MODE</Text>
           </View>
-        </Animated.View>
+        </View>
 
-        {/* Form */}
-        <Animated.View 
-          style={[
-            styles.formContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          {!isLogin && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>ชื่อผู้ใช้</Text>
-              <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>👤</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="ตั้งชื่อผู้ใช้ของคุณ"
-                  placeholderTextColor="#6c757d"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-          )}
+        <Text style={styles.title}>ZOMBIE QUIZ RPG</Text>
+        <Text style={styles.subtitle}>
+          {isLogin ? 'เอาชีวิตรอดจากซอมบี้' : 'ร่วมต่อสู้ในโลกอันตราย'}
+        </Text>
+      </Animated.View>
 
+      {/* Form */}
+      <Animated.View
+        style={[
+          styles.formContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Segmented toggle */}
+        <View style={styles.segmentedControl}>
+          <TouchableOpacity
+            style={[styles.segment, isLogin && styles.segmentActive]}
+            onPress={() => setIsLogin(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.segmentText, isLogin && styles.segmentTextActive]}>
+              เข้าสู่ระบบ
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segment, !isLogin && styles.segmentActive]}
+            onPress={() => setIsLogin(false)}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.segmentText, !isLogin && styles.segmentTextActive]}>
+              สมัครสมาชิก
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {!isLogin && (
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>อีเมล</Text>
+            <Text style={styles.label}>ชื่อผู้ใช้</Text>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>📧</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your@email.com"
-                placeholderTextColor="#6c757d"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                placeholder="ตั้งชื่อผู้ใช้ของคุณ"
+                placeholderTextColor="#9AA0A8"
+                value={username}
+                onChangeText={setUsername}
                 autoCapitalize="none"
               />
             </View>
           </View>
+        )}
 
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>อีเมล</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="your@email.com"
+              placeholderTextColor="#9AA0A8"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>รหัสผ่าน</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="กรอกรหัสผ่าน"
+              placeholderTextColor="#9AA0A8"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+        </View>
+
+        {!isLogin && (
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>รหัสผ่าน</Text>
+            <Text style={styles.label}>ยืนยันรหัสผ่าน</Text>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>🔒</Text>
               <TextInput
                 style={styles.input}
-                placeholder="กรอกรหัสผ่าน"
-                placeholderTextColor="#6c757d"
-                value={password}
-                onChangeText={setPassword}
+                placeholder="กรอกรหัสผ่านอีกครั้ง"
+                placeholderTextColor="#9AA0A8"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
                 secureTextEntry
               />
             </View>
           </View>
+        )}
 
-          {!isLogin && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>ยืนยันรหัสผ่าน</Text>
-              <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>🔒</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="กรอกรหัสผ่านอีกครั้ง"
-                  placeholderTextColor="#6c757d"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                />
-              </View>
-            </View>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={isLogin ? handleLogin : handleRegister}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color="#0A0B0D" />
+          ) : (
+            <Text style={styles.primaryButtonText}>
+              {isLogin ? 'เริ่มเกม' : 'สร้างตัวละคร'}
+            </Text>
           )}
+        </TouchableOpacity>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>หรือเข้าสู่ระบบด้วย</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
+        {/* OAuth buttons */}
+        <View style={styles.oauthButtons}>
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={isLogin ? handleLogin : handleRegister}
+            style={styles.oauthButton}
+            onPress={() => handleOAuthLogin('Google')}
             disabled={loading}
             activeOpacity={0.85}
           >
-            <LinearGradient
-              colors={['#e94560', '#ff6b6b']}
-              style={styles.primaryButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Text style={styles.primaryButtonText}>
-                    {isLogin ? '▶️ เริ่มเกม' : '✨ สร้างตัวละคร'}
-                  </Text>
-                </View>
-              )}
-            </LinearGradient>
+            <Text style={styles.oauthButtonText}>G</Text>
+            <Text style={styles.oauthButtonLabel}>Google</Text>
           </TouchableOpacity>
 
-          {/* OAuth Buttons */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>หรือเข้าสู่ระบบด้วย</Text>
-            <View style={styles.dividerLine} />
-          </View>
+          <TouchableOpacity
+            style={styles.oauthButton}
+            onPress={() => handleOAuthLogin('Facebook')}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.oauthButtonText}>f</Text>
+            <Text style={styles.oauthButtonLabel}>Facebook</Text>
+          </TouchableOpacity>
 
-          <View style={styles.oauthButtons}>
-            <TouchableOpacity
-              style={[styles.oauthButton, styles.googleButton]}
-              onPress={() => handleOAuthLogin('Google')}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <View style={styles.oauthButtonContent}>
-                <Text style={[styles.oauthButtonText, styles.googleText]}>G</Text>
-                <Text style={styles.oauthButtonLabel}>Google</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.oauthButton, styles.facebookButton]}
-              onPress={() => handleOAuthLogin('Facebook')}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <View style={styles.oauthButtonContent}>
-                <Text style={[styles.oauthButtonText, styles.facebookText]}>f</Text>
-                <Text style={styles.oauthButtonLabel}>Facebook</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.oauthButton, styles.appleButton]}
-              onPress={() => handleOAuthLogin('Apple')}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <View style={styles.oauthButtonContent}>
-                <Text style={[styles.oauthButtonText, styles.appleText]}></Text>
-                <Text style={styles.oauthButtonLabel}>Apple</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Toggle Login/Register */}
-          <View style={styles.toggleContainer}>
-            <Text style={styles.toggleText}>
-              {isLogin ? 'ยังไม่มีบัญชี? ' : 'มีบัญชีอยู่แล้ว? '}
-            </Text>
-            <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
-              <Text style={styles.toggleLink}>
-                {isLogin ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </LinearGradient>
+          <TouchableOpacity
+            style={styles.oauthButton}
+            onPress={() => handleOAuthLogin('Apple')}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.oauthButtonText}></Text>
+            <Text style={styles.oauthButtonLabel}>Apple</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
     </ScrollView>
   );
+};
+
+// ---- Design tokens ----
+const COLORS = {
+  bg: '#0A0B0D',
+  card: '#131519',
+  cardBorder: 'rgba(255,255,255,0.08)',
+  accent: '#FF4D3D',
+  accentMuted: 'rgba(255,77,61,0.12)',
+  white: '#FFFFFF',
+  textMuted: '#8B8F97',
+  textFaint: '#5C6068',
+  inputBg: '#FFFFFF',
+  inputText: '#0A0B0D',
+  danger: '#FF4D3D',
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.bg,
   },
   scrollContent: {
     paddingBottom: 40,
   },
-  gradient: {
-    flex: 1,
-    minHeight: '100%',
-  },
-  backgroundDecoration1: {
-    position: 'absolute',
-    top: -100,
-    right: -80,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(233, 69, 96, 0.03)',
-    borderWidth: 2,
-    borderColor: 'rgba(233, 69, 96, 0.08)',
-  },
-  backgroundDecoration2: {
-    position: 'absolute',
-    bottom: -80,
-    left: -100,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: 'rgba(15, 52, 96, 0.05)',
-    borderWidth: 2,
-    borderColor: 'rgba(15, 52, 96, 0.1)',
-  },
   header: {
-    alignItems: 'center',
-    paddingTop: 56,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+    paddingTop: 64,
+    paddingBottom: 28,
+    paddingHorizontal: 24,
   },
-  logoContainer: {
-    marginBottom: 25,
-  },
-  logoGlow: {
-    position: 'relative',
+  logoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  logoMark: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
     justifyContent: 'center',
-  },
-  logoCircle: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    backgroundColor: 'rgba(233, 69, 96, 0.08)',
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 15,
-    zIndex: 2,
   },
-  logoRing: {
-    position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 1.5,
-    borderColor: 'rgba(233, 69, 96, 0.3)',
-    borderStyle: 'dashed',
+  logoMarkText: {
+    fontSize: 24,
   },
-  logoEmoji: {
-    fontSize: 75,
-    zIndex: 3,
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accentMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(255,77,61,0.3)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.accent,
+    marginRight: 8,
+  },
+  statusPillText: {
+    color: COLORS.accent,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   title: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#e94560',
-    marginBottom: 10,
-    letterSpacing: 1.5,
-    textShadowColor: 'rgba(233, 69, 96, 0.3)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    fontSize: 34,
+    fontWeight: '900',
+    color: COLORS.white,
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#ff6b6b',
+    fontSize: 15,
+    color: COLORS.textMuted,
     fontWeight: '500',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-  warningBanner: {
-    marginTop: 15,
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    backgroundColor: 'rgba(233, 69, 96, 0.1)',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(233, 69, 96, 0.3)',
-  },
-  warningText: {
-    color: '#e94560',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.5,
   },
   formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 24,
+    backgroundColor: COLORS.card,
+    borderRadius: 28,
     padding: 20,
     marginHorizontal: 16,
-    marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: COLORS.cardBorder,
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
   },
-
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.bg,
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 24,
+  },
+  segment: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  segmentActive: {
+    backgroundColor: COLORS.white,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
+  segmentTextActive: {
+    color: COLORS.bg,
+  },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    color: '#a0a0a0',
+    fontSize: 12,
+    color: COLORS.textFaint,
     marginBottom: 8,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(233, 69, 96, 0.3)',
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    shadowColor: 'rgba(233, 69, 96, 0.1)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  inputIcon: {
-    fontSize: 18,
-    marginRight: 12,
-    opacity: 0.7,
   },
   input: {
-    flex: 1,
     height: 50,
-    color: '#ffffff',
-    fontSize: 16,
+    color: COLORS.inputText,
+    fontSize: 15,
+    fontWeight: '500',
   },
   errorText: {
-    color: '#ff6b6b',
-    fontSize: 14,
-    marginBottom: 20,
-    textAlign: 'center',
-    fontWeight: '600',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    color: COLORS.danger,
+    fontSize: 13,
+    marginBottom: 16,
+    fontWeight: '700',
+    backgroundColor: COLORS.accentMuted,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 107, 0.3)',
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: 'rgba(255,77,61,0.3)',
   },
   primaryButton: {
-    borderRadius: 14,
-    height: 52,
-    marginTop: 10,
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 10,
-    overflow: 'hidden',
-  },
-  primaryButtonGradient: {
-    borderRadius: 14,
-    height: 52,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    height: 54,
+    marginTop: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    color: COLORS.bg,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 30,
+    marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: COLORS.cardBorder,
   },
   dividerText: {
-    color: '#a0a0a0',
-    marginHorizontal: 16,
-    fontSize: 13,
-    fontWeight: '500',
+    color: COLORS.textFaint,
+    marginHorizontal: 12,
+    fontSize: 12,
+    fontWeight: '600',
   },
   oauthButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-    flexWrap: 'wrap',
     gap: 10,
   },
   oauthButton: {
     flex: 1,
-    minWidth: 90,
-    marginHorizontal: 6,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  oauthButtonContent: {
-    paddingVertical: 13,
+    borderColor: COLORS.cardBorder,
+    paddingVertical: 14,
     alignItems: 'center',
-  },
-  googleButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  facebookButton: {
-    backgroundColor: 'rgba(24, 119, 242, 0.95)',
-    borderColor: 'rgba(24, 119, 242, 0.5)',
-  },
-  appleButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  googleText: {
-    color: '#DB4437',
-  },
-  facebookText: {
-    color: '#ffffff',
-  },
-  appleText: {
-    color: '#ffffff',
   },
   oauthButtonText: {
-    fontSize: 26,
-    fontWeight: '700',
-    marginBottom: 3,
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.white,
+    marginBottom: 4,
   },
   oauthButtonLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#ffffff',
-    opacity: 0.9,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  toggleText: {
-    color: '#a0a0a0',
-    fontSize: 15,
-  },
-  toggleLink: {
-    color: '#e94560',
-    fontSize: 15,
-    fontWeight: '700',
-    marginLeft: 5,
+    color: COLORS.textMuted,
   },
 });
 

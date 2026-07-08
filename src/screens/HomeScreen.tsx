@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ImageBackground,
   ScrollView,
   Animated,
@@ -17,6 +16,7 @@ import { getCharacterById } from '../data/characters';
 import { LinearGradient } from 'expo-linear-gradient';
 import { playSound, vibrate } from '../utils/helpers';
 import i18n from '@/i18n';
+import { Button, Mascot } from '../components';
 
 
 const { width } = Dimensions.get('window');
@@ -87,7 +87,7 @@ const HomeScreen: React.FC = () => {
   const handleStartGame = () => {
     playSound('click');
     vibrate(10);
-    navigation.navigate('LevelMap');
+    navigation.navigate('Categories');
   };
 
   const handleCharacters = () => {
@@ -114,43 +114,82 @@ const HomeScreen: React.FC = () => {
     >
       <View style={styles.backdropOverlay} />
       <View style={styles.pageContent}>
-        {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.playerInfo}>
-          <View style={styles.avatarContainer}>
-            <View style={[styles.avatarCircle, { borderColor: '#ffd700' }]}>
-              <Text style={styles.avatarEmoji}>🧟</Text>
+        {/* Header with minimal cute zombie design */}
+        <LinearGradient
+          colors={['rgba(30, 41, 59, 0.95)', 'rgba(15, 23, 42, 0.85)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.playerInfo}>
+            <View style={styles.avatarContainer}>
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatarCircle}
+              >
+                <Text style={styles.avatarEmoji}>🧟</Text>
+              </LinearGradient>
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelText}>{player.playerLevel}</Text>
+              </View>
             </View>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>{player.playerLevel}</Text>
+            <View style={styles.playerDetails}>
+              <Text style={styles.username}>{player.username}</Text>
+              <Text style={styles.playerLevelText}>เลเวล {player.playerLevel}</Text>
             </View>
           </View>
-          <View style={styles.playerDetails}>
-            <Text style={styles.username}>{player.username}</Text>
-            <Text style={styles.playerLevelText}>เลเวล {player.playerLevel}</Text>
+          <View style={styles.currency}>
+            <LinearGradient
+              colors={['rgba(245, 158, 11, 0.2)', 'rgba(251, 191, 36, 0.15)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.coinBox}
+            >
+              <Text style={styles.coinIcon}>🪙</Text>
+              <Text style={styles.coinText}>{player.coins.toLocaleString()}</Text>
+            </LinearGradient>
+            <LinearGradient
+              colors={['rgba(139, 92, 246, 0.2)', 'rgba(167, 139, 250, 0.15)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.gemBox}
+            >
+              <Text style={styles.gemIcon}>💎</Text>
+              <Text style={styles.gemText}>{player.gems.toLocaleString()}</Text>
+            </LinearGradient>
           </View>
-        </View>
-        <View style={styles.currency}>
-          <View style={[styles.coinBox, { backgroundColor: 'rgba(255, 215, 0, 0.2)'}]}>
-            <Text style={styles.coinIcon}>🪙</Text>
-            <Text style={styles.coinText}>{player.coins.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.gemBox, { backgroundColor: 'rgba(147, 112, 219, 0.2)'}]}>
-            <Text style={styles.gemIcon}>💎</Text>
-            <Text style={styles.gemText}>{player.gems.toLocaleString()}</Text>
-          </View>
-        </View>
+        </LinearGradient>
+
+      {/* Mascot Section */}
+      <View style={styles.mascotSection}>
+        <Mascot 
+          emotion="happy" 
+          size="medium"
+          message="พร้อมสู้ซอมบี้หรือยัง!"
+        />
       </View>
 
-      {/* Main Character Display */}
+      {/* Main Character Display with minimal cute zombie design */}
       <View style={styles.characterDisplay}>
-        <View style={styles.characterFrame}>
+        <LinearGradient
+          colors={['rgba(132, 204, 22, 0.15)', 'rgba(30, 41, 59, 0.85)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.characterFrame}
+        >
           {selectedCharacter ? (
             <View style={styles.characterPlaceholder}>
-              <View style={[styles.characterArtWrapper, { shadowColor: getRarityColor(selectedCharacter.rarity), shadowOpacity: 0.5, shadowRadius: 15, shadowOffset: { width: 0, height: 0 } }]}>
-                <View style={[styles.characterArtCircle, { backgroundColor: getRarityColor(selectedCharacter.rarity) + '40' }]}>
+              <View style={styles.characterArtWrapper}>
+                <LinearGradient
+                  colors={[getRarityColor(selectedCharacter.rarity) + '60', getRarityColor(selectedCharacter.rarity) + '30']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.characterArtCircle, { borderColor: getRarityColor(selectedCharacter.rarity) }]}
+                >
                   <Text style={styles.characterEmoji}>{getTypeIcon(selectedCharacter.type)}</Text>
-                </View>
+                </LinearGradient>
                 <View style={[styles.characterLevelBadge, { backgroundColor: getRarityColor(selectedCharacter.rarity) }]}>
                   <Text style={styles.characterLevelText}>{player.characterLevels[selectedCharacter.id] || 1}</Text>
                 </View>
@@ -182,16 +221,18 @@ const HomeScreen: React.FC = () => {
             </View>
           ) : (
             <View style={styles.noCharacterContainer}>
+              <Mascot emotion="thinking" size="small" message="เลือกตัวละครของคุณ!" />
               <Text style={styles.noCharacter}>ยังไม่ได้เลือกตัวละคร</Text>
-              <TouchableOpacity 
-                style={styles.selectCharacterButton}
+              <Button
+                title="เลือกตัวละคร"
                 onPress={handleCharacters}
-              >
-                <Text style={styles.selectCharacterButtonText}>เลือกตัวละคร</Text>
-              </TouchableOpacity>
+                variant="mascot"
+                size="medium"
+                icon="👥"
+              />
             </View>
           )}
-        </View>
+        </LinearGradient>
       </View>
 
       {/* Menu Buttons */}
@@ -204,113 +245,114 @@ const HomeScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <Animated.View style={{ transform: [{ scale: startPulseAnim }] }}>
-          <TouchableOpacity 
-            style={[styles.menuButton, styles.startGameButton]} 
+          <Button
+            title="เริ่มเกม"
             onPress={handleStartGame}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={["#ff6b6b", "#e94560"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.menuButtonGradient}
-            >
-              <View style={styles.menuButtonContent}>
-                <View style={[styles.menuButtonIconContainer, { backgroundColor: 'transparent' }]}>
-                  <Text style={styles.menuButtonIcon}>⚔️</Text>
-                </View>
-                <Text style={styles.menuButtonText}>เริ่มเกม</Text>
-                <Text style={styles.menuButtonArrow}>➤</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            variant="primary"
+            size="large"
+            icon="⚔️"
+            gradient={true}
+            style={styles.startButton}
+          />
         </Animated.View>
 
         <View style={styles.menuGrid}>
-          <TouchableOpacity 
-            style={[styles.menuButtonSmall, styles.charactersButton]} 
+          <Button
+            title="ตัวละคร"
             onPress={handleCharacters}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.menuButtonIconContainerSmall, { backgroundColor: '#3498db' }]}>
-              <Text style={styles.menuButtonIconSmall}>👥</Text>
-            </View>
-            <Text style={styles.menuButtonTextSmall}>ตัวละคร</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.menuButtonSmall, styles.shopButton]} 
+            variant="secondary"
+            size="medium"
+            icon="👥"
+            gradient={true}
+            style={styles.menuGridButton}
+          />
+          <Button
+            title="ร้านค้า"
             onPress={handleShop}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.menuButtonIconContainerSmall, { backgroundColor: '#f39c12' }]}>
-              <Text style={styles.menuButtonIconSmall}>🏪</Text>
-            </View>
-            <Text style={styles.menuButtonTextSmall}>ร้านค้า</Text>
-          </TouchableOpacity>
+            variant="secondary"
+            size="medium"
+            icon="🏪"
+            gradient={true}
+            style={styles.menuGridButton}
+          />
         </View>
 
         <View style={styles.menuGrid}>
-          <TouchableOpacity 
-            style={[styles.menuButtonSmall, styles.profileButton]} 
+          <Button
+            title="โปรไฟล์"
             onPress={handleProfile}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.menuButtonIconContainerSmall, { backgroundColor: '#9b59b6' }]}>
-              <Text style={styles.menuButtonIconSmall}>👤</Text>
-            </View>
-            <Text style={styles.menuButtonTextSmall}>โปรไฟล์</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.menuButtonSmall, styles.settingsButton]} 
+            variant="secondary"
+            size="medium"
+            icon="👤"
+            gradient={true}
+            style={styles.menuGridButton}
+          />
+          <Button
+            title="ตั้งค่า"
             onPress={handleSettings}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.menuButtonIconContainerSmall, { backgroundColor: '#95a5a6' }]}>
-              <Text style={styles.menuButtonIconSmall}>⚙️</Text>
-            </View>
-            <Text style={styles.menuButtonTextSmall}>ตั้งค่า</Text>
-          </TouchableOpacity>
+            variant="secondary"
+            size="medium"
+            icon="⚙️"
+            gradient={true}
+            style={styles.menuGridButton}
+          />
         </View>
       </ScrollView>
 
-      {/* Daily Reward Popup */}
+      {/* Daily Reward Popup with modern design */}
       {showDailyReward && (
         <View style={styles.dailyRewardOverlay}>
           <Animated.View style={[styles.dailyRewardPopup, { opacity: fadeAnim }]}>
-          <View style={styles.dailyRewardContent}>
-            <View style={styles.dailyRewardHeader}>
-              <Text style={styles.dailyRewardEmoji}>🎁</Text>
-              <Text style={styles.dailyRewardTitle}>โบนัสประจำวัน</Text>
-            </View>
-            <Text style={styles.dailyRewardDescription}>
-              รับโบนัสประจำวันของคุณ
-            </Text>
-            <View style={styles.rewardItems}>
-              <View style={styles.rewardItem}>
-                <View style={[styles.rewardIconBox, { backgroundColor: 'rgba(255, 215, 0, 0.2)' }]}>
-                  <Text style={styles.rewardIcon}>🪙</Text>
-                </View>
-                <Text style={styles.rewardAmount}>+500</Text>
-                <Text style={styles.rewardLabel}>เหรียญ</Text>
-              </View>
-              <View style={styles.rewardItem}>
-                <View style={[styles.rewardIconBox, { backgroundColor: 'rgba(147, 112, 219, 0.2)' }]}>
-                  <Text style={styles.rewardIcon}>💎</Text>
-                </View>
-                <Text style={styles.rewardAmount}>+5</Text>
-                <Text style={styles.rewardLabel}>เจม</Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.claimButton}
-              onPress={handleClaimDailyReward}
+            <LinearGradient
+              colors={['#C084FC', '#E9B5FA']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.dailyRewardContent}
             >
-              <Text style={styles.claimButtonText}>รับโบนัส</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
+              <Mascot emotion="celebrating" size="small" message="ยินดีด้วย!" />
+              <View style={styles.dailyRewardHeader}>
+                <Text style={styles.dailyRewardEmoji}>🎁</Text>
+                <Text style={styles.dailyRewardTitle}>โบนัสประจำวัน</Text>
+              </View>
+              <Text style={styles.dailyRewardDescription}>
+                รับโบนัสประจำวันของคุณ
+              </Text>
+              <View style={styles.rewardItems}>
+                <View style={styles.rewardItem}>
+                  <LinearGradient
+                    colors={['rgba(245, 158, 11, 0.3)', 'rgba(251, 191, 36, 0.15)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.rewardIconBox}
+                  >
+                    <Text style={styles.rewardIcon}>🪙</Text>
+                  </LinearGradient>
+                  <Text style={styles.rewardAmount}>+500</Text>
+                  <Text style={styles.rewardLabel}>เหรียญ</Text>
+                </View>
+                <View style={styles.rewardItem}>
+                  <LinearGradient
+                    colors={['rgba(139, 92, 246, 0.3)', 'rgba(167, 139, 250, 0.15)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.rewardIconBox}
+                  >
+                    <Text style={styles.rewardIcon}>💎</Text>
+                  </LinearGradient>
+                  <Text style={styles.rewardAmount}>+5</Text>
+                  <Text style={styles.rewardLabel}>เจม</Text>
+                </View>
+              </View>
+              <Button
+                title="รับโบนัส"
+                onPress={handleClaimDailyReward}
+                variant="success"
+                size="large"
+                gradient={true}
+                style={styles.claimButton}
+              />
+            </LinearGradient>
+          </Animated.View>
         </View>
       )}
     </View>
@@ -321,14 +363,14 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#0a0e1a',
   },
   backgroundImage: {
-    opacity: 0.45,
+    opacity: 0.35,
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(6, 10, 20, 0.65)',
+    backgroundColor: 'rgba(6, 10, 20, 0.75)',
     pointerEvents: 'none',
   },
   pageContent: {
@@ -340,8 +382,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#16213e',
+    paddingBottom: 25,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   playerInfo: {
     flexDirection: 'row',
@@ -353,32 +401,39 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(233, 69, 96, 0.1)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e94560',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   avatarEmoji: {
-    fontSize: 28,
+    fontSize: 30,
   },
   levelBadge: {
     position: 'absolute',
-    bottom: -5,
-    right: -5,
-    backgroundColor: '#e94560',
-    paddingHorizontal: 8,
+    bottom: -3,
+    right: -3,
+    backgroundColor: '#ffd700',
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#1a1a2e',
+    borderColor: '#0a0e1a',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   levelText: {
-    fontSize: 11,
-    color: '#ffffff',
+    fontSize: 10,
+    color: '#000000',
     fontWeight: 'bold',
   },
   playerDetails: {
@@ -386,51 +441,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   username: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 3,
+    marginBottom: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   playerLevelText: {
-    fontSize: 13,
-    color: '#a0a0a0',
+    fontSize: 12,
+    color: '#b0b0b0',
     fontWeight: '500',
   },
   currency: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   coinBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(243, 156, 18, 0.15)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(243, 156, 18, 0.4)',
-    shadowColor: 'rgba(243, 156, 18, 0.3)',
-    shadowOffset: { width: 0, height: 3 },
+    borderWidth: 2,
+    borderColor: 'rgba(245, 158, 11, 0.5)',
+    shadowColor: 'rgba(245, 158, 11, 0.4)',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
-    minWidth: 90,
+    shadowRadius: 8,
+    elevation: 6,
+    minWidth: 85,
   },
   gemBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(155, 89, 182, 0.15)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(155, 89, 182, 0.4)',
-    shadowColor: 'rgba(155, 89, 182, 0.3)',
-    shadowOffset: { width: 0, height: 3 },
+    borderWidth: 2,
+    borderColor: 'rgba(139, 92, 246, 0.5)',
+    shadowColor: 'rgba(139, 92, 246, 0.4)',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
-    minWidth: 80,
+    shadowRadius: 8,
+    elevation: 6,
+    minWidth: 75,
   },
   coinIcon: {
     fontSize: 20,
@@ -450,25 +506,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#9b59b6',
   },
+  mascotSection: {
+    alignItems: 'center',
+    paddingVertical: 15,
+  },
   characterDisplay: {
     alignItems: 'center',
     paddingVertical: 20,
     paddingHorizontal: 20,
   },
   characterFrame: {
-    width: Math.min(width * 0.6, 220),
-    height: Math.min(width * 0.6, 220),
-    borderRadius: Math.min(width * 0.3, 110),
-    backgroundColor: 'rgba(233, 69, 96, 0.08)',
-    borderWidth: 3,
-    borderColor: '#e94560',
+    width: Math.min(width * 0.65, 240),
+    height: Math.min(width * 0.65, 240),
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#e94560',
+    shadowColor: '#84CC16',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
     elevation: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(132, 204, 22, 0.4)',
   },
   characterPlaceholder: {
     alignItems: 'center',
@@ -481,16 +540,16 @@ const styles = StyleSheet.create({
     width: Math.min(width * 0.25, 100),
     height: Math.min(width * 0.25, 100),
     borderRadius: Math.min(width * 0.125, 50),
-    backgroundColor: 'rgba(233, 69, 96, 0.15)',
+    backgroundColor: 'rgba(132, 204, 22, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
+    borderColor: '#84CC16',
+    shadowColor: '#84CC16',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 8,
+    shadowRadius: 18,
+    elevation: 10,
   },
   characterEmoji: {
     fontSize: Math.min(width * 0.15, 65),
@@ -499,19 +558,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 5,
     right: 5,
-    backgroundColor: '#e94560',
+    backgroundColor: '#84CC16',
     width: 38,
     height: 38,
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#1a1a2e',
-    shadowColor: '#e94560',
+    borderColor: '#1E293B',
+    shadowColor: '#84CC16',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   characterLevelText: {
     fontSize: 16,
@@ -533,7 +592,7 @@ const styles = StyleSheet.create({
   characterRarity: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#e94560',
+    color: '#84CC16',
     marginBottom: 12,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -563,29 +622,16 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   menuScrollContent: {
-    paddingBottom: 80,
+    paddingBottom: 100,
+    gap: 16,
   },
-  menuButton: {
-    backgroundColor: 'rgba(233, 69, 96, 0.08)',
-    borderRadius: 16,
-    marginBottom: 15,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  startGameButton: {
-    backgroundColor: 'rgba(233, 69, 96, 0.15)',
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 4 },
+  startButton: {
+    marginBottom: 8,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 8,
+    shadowRadius: 16,
+    elevation: 12,
   },
   menuButtonContent: {
     flexDirection: 'row',
@@ -618,7 +664,7 @@ const styles = StyleSheet.create({
   },
   menuButtonArrow: {
     fontSize: 26,
-    color: '#e94560',
+    color: '#6366F1',
     fontWeight: 'bold',
   },
   menuButtonGradient: {
@@ -629,63 +675,15 @@ const styles = StyleSheet.create({
   menuGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
     gap: 12,
   },
-  menuButtonSmall: {
+  menuGridButton: {
     flex: 1,
-    backgroundColor: 'rgba(233, 69, 96, 0.08)',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#e94560',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 3 },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,
-  },
-  charactersButton: {
-    borderColor: '#3498db',
-    backgroundColor: 'rgba(52, 152, 219, 0.15)',
-  },
-  shopButton: {
-    borderColor: '#f39c12',
-    backgroundColor: 'rgba(243, 156, 18, 0.15)',
-  },
-  profileButton: {
-    borderColor: '#9b59b6',
-    backgroundColor: 'rgba(155, 89, 182, 0.15)',
-  },
-  settingsButton: {
-    borderColor: '#95a5a6',
-    backgroundColor: 'rgba(149, 165, 166, 0.15)',
-  },
-  menuButtonIconContainerSmall: {
-    width: 45,
-    height: 45,
-    borderRadius: 22,
-    backgroundColor: 'rgba(233, 69, 96, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  menuButtonIconSmall: {
-    fontSize: 24,
-  },
-  menuButtonTextSmall: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff',
-    textAlign: 'center',
-    letterSpacing: 0.2,
+    elevation: 6,
   },
   characterLevel: {
     fontSize: 12,
@@ -696,12 +694,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 15,
-    backgroundColor: 'rgba(233, 69, 96, 0.08)',
+    backgroundColor: 'rgba(132, 204, 22, 0.08)',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(233, 69, 96, 0.3)',
+    borderColor: 'rgba(132, 204, 22, 0.3)',
   },
   statMini: {
     alignItems: 'center',
@@ -716,35 +714,38 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffffff',
   },
-  dailyRewardPopup: {
+  dailyRewardOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
+  dailyRewardPopup: {
+    width: '90%',
+    maxWidth: 400,
+  },
   dailyRewardContent: {
-    backgroundColor: '#16213e',
     padding: 30,
-    borderRadius: 20,
+    borderRadius: 32,
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#e94560',
-    width: '85%',
-    shadowColor: '#e94560',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#C084FC',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 28,
+    elevation: 18,
   },
   dailyRewardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    marginTop: 10,
   },
   dailyRewardEmoji: {
     fontSize: 40,
@@ -753,23 +754,22 @@ const styles = StyleSheet.create({
   dailyRewardTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#e94560',
+    color: '#C084FC',
+    textShadowColor: 'rgba(192, 132, 252, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   dailyRewardDescription: {
     fontSize: 16,
-    color: '#ffffff',
+    color: '#b0b0b0',
     textAlign: 'center',
     marginBottom: 20,
   },
-  rewardLabel: {
-    fontSize: 12,
-    color: '#cccccc',
-    marginTop: 5,
-  },
   rewardItems: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 20,
-    marginBottom: 20,
+    marginBottom: 25,
   },
   rewardItem: {
     alignItems: 'center',
@@ -778,42 +778,27 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   rewardIcon: {
-    fontSize: 35,
+    fontSize: 28,
   },
   rewardAmount: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginTop: 5,
+    marginBottom: 2,
+  },
+  rewardLabel: {
+    fontSize: 12,
+    color: '#a0a0a0',
   },
   claimButton: {
-    backgroundColor: '#e94560',
-    paddingHorizontal: 40,
-    paddingVertical: 15,
-    borderRadius: 25,
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  claimButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  dailyRewardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
+    marginTop: 10,
   },
 });
 
