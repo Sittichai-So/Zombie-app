@@ -1,7 +1,7 @@
 // Generator สำหรับสร้างข้อสอบคณิตศาสตร์ (Mathematics) จำนวนมาก
 // เป้าหมาย: 300 ข้อ
 
-import { MathematicsQuestion } from '../mathematics';
+import { MathQuestion } from '../mathematics';
 
 let questionId = 2000; // เริ่มจาก 2000
 
@@ -15,8 +15,8 @@ const randomFloat = (min: number, max: number, decimals: number = 2): number => 
 };
 
 // Easy Questions: พื้นฐาน
-const generateEasyQuestions = (): MathematicsQuestion[] => {
-  const questions: MathematicsQuestion[] = [];
+const generateEasyQuestions = (): MathQuestion[] => {
+  const questions: MathQuestion[] = [];
   
   // 1. การบวก/ลบ (30 ข้อ)
   for (let i = 0; i < 30; i++) {
@@ -35,11 +35,16 @@ const generateEasyQuestions = (): MathematicsQuestion[] => {
       
       questions.push({
         id: questionId++,
-        question: `จงหาผลลัพธ์ของ ${a} + ${b}`,
-        options: options.map(String),
+        category: 'mathematics',
+        question_th: `จงหาผลลัพธ์ของ ${a} + ${b}`,
+        question_en: `Find the result of ${a} + ${b}`,
+        options_th: options.map(String),
+        options_en: options.map(String),
         correctAnswer: options.indexOf(answer),
-        explanation: `${a} + ${b} = ${answer}`,
-        difficulty: 'easy'
+        explanation_th: `${a} + ${b} = ${answer}`,
+        explanation_en: `${a} + ${b} = ${answer}`,
+        difficulty: 'easy',
+        topic: 'arithmetic'
       });
     } else {
       const [max, min] = a > b ? [a, b] : [b, a];
@@ -53,11 +58,16 @@ const generateEasyQuestions = (): MathematicsQuestion[] => {
       
       questions.push({
         id: questionId++,
-        question: `จงหาผลลัพธ์ของ ${max} - ${min}`,
-        options: options.map(String),
+        category: 'mathematics',
+        question_th: `จงหาผลลัพธ์ของ ${max} - ${min}`,
+        question_en: `Find the result of ${max} - ${min}`,
+        options_th: options.map(String),
+        options_en: options.map(String),
         correctAnswer: options.indexOf(answer),
-        explanation: `${max} - ${min} = ${answer}`,
-        difficulty: 'easy'
+        explanation_th: `${max} - ${min} = ${answer}`,
+        explanation_en: `${max} - ${min} = ${answer}`,
+        difficulty: 'easy',
+        topic: 'arithmetic'
       });
     }
   }
@@ -79,11 +89,16 @@ const generateEasyQuestions = (): MathematicsQuestion[] => {
       
       questions.push({
         id: questionId++,
-        question: `จงหาผลลัพธ์ของ ${a} × ${b}`,
-        options: options.map(String),
+        category: 'mathematics',
+        question_th: `จงหาผลลัพธ์ของ ${a} × ${b}`,
+        question_en: `Find the result of ${a} × ${b}`,
+        options_th: options.map(String),
+        options_en: options.map(String),
         correctAnswer: options.indexOf(answer),
-        explanation: `${a} × ${b} = ${answer}`,
-        difficulty: 'easy'
+        explanation_th: `${a} × ${b} = ${answer}`,
+        explanation_en: `${a} × ${b} = ${answer}`,
+        difficulty: 'easy',
+        topic: 'arithmetic'
       });
     } else {
       const dividend = a * b;
@@ -97,11 +112,16 @@ const generateEasyQuestions = (): MathematicsQuestion[] => {
       
       questions.push({
         id: questionId++,
-        question: `จงหาผลลัพธ์ของ ${dividend} ÷ ${b}`,
-        options: options.map(String),
+        category: 'mathematics',
+        question_th: `จงหาผลลัพธ์ของ ${dividend} ÷ ${b}`,
+        question_en: `Find the result of ${dividend} ÷ ${b}`,
+        options_th: options.map(String),
+        options_en: options.map(String),
         correctAnswer: options.indexOf(answer),
-        explanation: `${dividend} ÷ ${b} = ${answer}`,
-        difficulty: 'easy'
+        explanation_th: `${dividend} ÷ ${b} = ${answer}`,
+        explanation_en: `${dividend} ÷ ${b} = ${answer}`,
+        difficulty: 'easy',
+        topic: 'arithmetic'
       });
     }
   }
@@ -121,11 +141,16 @@ const generateEasyQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `${percent}% ของ ${base} เท่ากับเท่าไร`,
-      options: options.map(String),
+      category: 'mathematics',
+      question_th: `${percent}% ของ ${base} เท่ากับเท่าไร`,
+      question_en: `What is ${percent}% of ${base}?`,
+      options_th: options.map(String),
+      options_en: options.map(String),
       correctAnswer: options.indexOf(answer),
-      explanation: `${percent}% ของ ${base} = (${percent} × ${base}) / 100 = ${answer}`,
-      difficulty: 'easy'
+      explanation_th: `${percent}% ของ ${base} = (${percent} × ${base}) / 100 = ${answer}`,
+      explanation_en: `${percent}% of ${base} = (${percent} × ${base}) / 100 = ${answer}`,
+      difficulty: 'easy',
+      topic: 'percentage'
     });
   }
   
@@ -145,11 +170,16 @@ const generateEasyQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `จงหาค่า x จากสมการ ${a}x + ${b} = ${result}`,
-      options: options.map(String),
+      category: 'mathematics',
+      question_th: `จงหาค่า x จากสมการ ${a}x + ${b} = ${result}`,
+      question_en: `Find x from the equation ${a}x + ${b} = ${result}`,
+      options_th: options.map(String),
+      options_en: options.map(String),
       correctAnswer: options.indexOf(x),
-      explanation: `${a}x + ${b} = ${result}\n${a}x = ${result} - ${b}\n${a}x = ${a * x}\nx = ${x}`,
-      difficulty: 'easy'
+      explanation_th: `${a}x + ${b} = ${result}\n${a}x = ${result} - ${b}\n${a}x = ${a * x}\nx = ${x}`,
+      explanation_en: `${a}x + ${b} = ${result}\n${a}x = ${result} - ${b}\n${a}x = ${a * x}\nx = ${x}`,
+      difficulty: 'easy',
+      topic: 'algebra'
     });
   }
   
@@ -157,8 +187,8 @@ const generateEasyQuestions = (): MathematicsQuestion[] => {
 };
 
 // Medium Questions: ปานกลาง
-const generateMediumQuestions = (): MathematicsQuestion[] => {
-  const questions: MathematicsQuestion[] = [];
+const generateMediumQuestions = (): MathQuestion[] => {
+  const questions: MathQuestion[] = [];
   
   // 1. พื้นที่รูปทรงพื้นฐาน (30 ข้อ)
   // สี่เหลี่ยมผืนผ้า
@@ -176,11 +206,16 @@ const generateMediumQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `สี่เหลี่ยมผืนผ้ากว้าง ${width} ซม. ยาว ${height} ซม. มีพื้นที่เท่าไร`,
-      options: options.map(String),
+      category: 'mathematics',
+      question_th: `สี่เหลี่ยมผืนผ้ากว้าง ${width} ซม. ยาว ${height} ซม. มีพื้นที่เท่าไร`,
+      question_en: `A rectangle has width ${width} cm and length ${height} cm. What is its area?`,
+      options_th: options.map(String),
+      options_en: options.map(String),
       correctAnswer: options.indexOf(area),
-      explanation: `พื้นที่สี่เหลี่ยมผืนผ้า = กว้าง × ยาว = ${width} × ${height} = ${area} ตร.ซม.`,
-      difficulty: 'medium'
+      explanation_th: `พื้นที่สี่เหลี่ยมผืนผ้า = กว้าง × ยาว = ${width} × ${height} = ${area} ตร.ซม.`,
+      explanation_en: `Area of rectangle = width × length = ${width} × ${height} = ${area} sq.cm.`,
+      difficulty: 'medium',
+      topic: 'geometry'
     });
   }
   
@@ -198,11 +233,16 @@ const generateMediumQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `วงกลมมีรัศมี ${radius} ซม. มีพื้นที่ประมาณเท่าไร (ใช้ π = 3.14)`,
-      options: options.map(String),
+      category: 'mathematics',
+      question_th: `วงกลมมีรัศมี ${radius} ซม. มีพื้นที่ประมาณเท่าไร (ใช้ π = 3.14)`,
+      question_en: `A circle has radius ${radius} cm. What is its area? (Use π = 3.14)`,
+      options_th: options.map(String),
+      options_en: options.map(String),
       correctAnswer: options.indexOf(area),
-      explanation: `พื้นที่วงกลม = πr² = 3.14 × ${radius}² = 3.14 × ${radius * radius} ≈ ${area} ตร.ซม.`,
-      difficulty: 'medium'
+      explanation_th: `พื้นที่วงกลม = πr² = 3.14 × ${radius}² = 3.14 × ${radius * radius} ≈ ${area} ตร.ซม.`,
+      explanation_en: `Area of circle = πr² = 3.14 × ${radius}² = 3.14 × ${radius * radius} ≈ ${area} sq.cm.`,
+      difficulty: 'medium',
+      topic: 'geometry'
     });
   }
   
@@ -221,11 +261,16 @@ const generateMediumQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `สามเหลี่ยมมีฐาน ${base} ซม. สูง ${height} ซม. มีพื้นที่เท่าไร`,
-      options: options.map(String),
+      category: 'mathematics',
+      question_th: `สามเหลี่ยมมีฐาน ${base} ซม. สูง ${height} ซม. มีพื้นที่เท่าไร`,
+      question_en: `A triangle has base ${base} cm and height ${height} cm. What is its area?`,
+      options_th: options.map(String),
+      options_en: options.map(String),
       correctAnswer: options.indexOf(area),
-      explanation: `พื้นที่สามเหลี่ยม = ½ × ฐาน × สูง = ½ × ${base} × ${height} = ${area} ตร.ซม.`,
-      difficulty: 'medium'
+      explanation_th: `พื้นที่สามเหลี่ยม = ½ × ฐาน × สูง = ½ × ${base} × ${height} = ${area} ตร.ซม.`,
+      explanation_en: `Area of triangle = ½ × base × height = ½ × ${base} × ${height} = ${area} sq.cm.`,
+      difficulty: 'medium',
+      topic: 'geometry'
     });
   }
   
@@ -246,11 +291,16 @@ const generateMediumQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `จงหาคำตอบของสมการ x² ${b >= 0 ? '+' : '-'} ${Math.abs(b)}x ${c >= 0 ? '+' : '-'} ${Math.abs(c)} = 0`,
-      options,
+      category: 'mathematics',
+      question_th: `จงหาคำตอบของสมการ x² ${b >= 0 ? '+' : '-'} ${Math.abs(b)}x ${c >= 0 ? '+' : '-'} ${Math.abs(c)} = 0`,
+      question_en: `Find the solutions of the equation x² ${b >= 0 ? '+' : '-'} ${Math.abs(b)}x ${c >= 0 ? '+' : '-'} ${Math.abs(c)} = 0`,
+      options_th: options,
+      options_en: options,
       correctAnswer: options.indexOf(`${x1}, ${x2}`),
-      explanation: `แยกตัวประกอบ: (x - ${x1})(x - ${x2}) = 0\nดังนั้น x = ${x1} หรือ ${x2}`,
-      difficulty: 'medium'
+      explanation_th: `แยกตัวประกอบ: (x - ${x1})(x - ${x2}) = 0\nดังนั้น x = ${x1} หรือ ${x2}`,
+      explanation_en: `Factorize: (x - ${x1})(x - ${x2}) = 0\nTherefore x = ${x1} or ${x2}`,
+      difficulty: 'medium',
+      topic: 'algebra'
     });
   }
   
@@ -274,11 +324,16 @@ const generateMediumQuestions = (): MathematicsQuestion[] => {
       
       questions.push({
         id: questionId++,
-        question: `แบ่ง ${total} บาท ให้ A และ B ในอัตราส่วน ${ratio1}:${ratio2} A และ B จะได้เงินคนละเท่าไร`,
-        options,
+        category: 'mathematics',
+        question_th: `แบ่ง ${total} บาท ให้ A และ B ในอัตราส่วน ${ratio1}:${ratio2} A และ B จะได้เงินคนละเท่าไร`,
+        question_en: `Divide ${total} baht between A and B in the ratio ${ratio1}:${ratio2}. How much does each get?`,
+        options_th: options,
+        options_en: options,
         correctAnswer: options.indexOf(`${part1}:${part2}`),
-        explanation: `รวมอัตราส่วน = ${ratio1} + ${ratio2} = ${sum}\n1 ส่วน = ${total} ÷ ${sum} = ${total / sum}\nA ได้ = ${ratio1} × ${total / sum} = ${part1}\nB ได้ = ${ratio2} × ${total / sum} = ${part2}`,
-        difficulty: 'medium'
+        explanation_th: `รวมอัตราส่วน = ${ratio1} + ${ratio2} = ${sum}\n1 ส่วน = ${total} ÷ ${sum} = ${total / sum}\nA ได้ = ${ratio1} × ${total / sum} = ${part1}\nB ได้ = ${ratio2} × ${total / sum} = ${part2}`,
+        explanation_en: `Total ratio = ${ratio1} + ${ratio2} = ${sum}\n1 part = ${total} ÷ ${sum} = ${total / sum}\nA gets = ${ratio1} × ${total / sum} = ${part1}\nB gets = ${ratio2} × ${total / sum} = ${part2}`,
+        difficulty: 'medium',
+        topic: 'ratio'
       });
     }
   }
@@ -287,8 +342,8 @@ const generateMediumQuestions = (): MathematicsQuestion[] => {
 };
 
 // Hard Questions: ยาก
-const generateHardQuestions = (): MathematicsQuestion[] => {
-  const questions: MathematicsQuestion[] = [];
+const generateHardQuestions = (): MathQuestion[] => {
+  const questions: MathQuestion[] = [];
   
   // 1. โจทย์ปัญหา (30 ข้อ)
   for (let i = 0; i < 30; i++) {
@@ -308,11 +363,16 @@ const generateHardQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `สินค้าราคา ${price} บาท ลดราคา ${discount}% และคิดภาษี ${tax}% ราคาสินค้าสุดท้ายคือเท่าไร`,
-      options: options.map(String),
+      category: 'mathematics',
+      question_th: `สินค้าราคา ${price} บาท ลดราคา ${discount}% และคิดภาษี ${tax}% ราคาสินค้าสุดท้ายคือเท่าไร`,
+      question_en: `An item costs ${price} baht. After ${discount}% discount and ${tax}% tax, what is the final price?`,
+      options_th: options.map(String),
+      options_en: options.map(String),
       correctAnswer: options.indexOf(Math.round(finalPrice)),
-      explanation: `ราคาลด = ${price} × (100 - ${discount})% = ${price} × ${(100 - discount) / 100} = ${discountedPrice}\nรวมภาษี = ${discountedPrice} × (100 + ${tax})% = ${discountedPrice} × ${(100 + tax) / 100} = ${finalPrice.toFixed(2)}\nปัดเศษ = ${Math.round(finalPrice)} บาท`,
-      difficulty: 'hard'
+      explanation_th: `ราคาลด = ${price} × (100 - ${discount})% = ${price} × ${(100 - discount) / 100} = ${discountedPrice}\nรวมภาษี = ${discountedPrice} × (100 + ${tax})% = ${discountedPrice} × ${(100 + tax) / 100} = ${finalPrice.toFixed(2)}\nปัดเศษ = ${Math.round(finalPrice)} บาท`,
+      explanation_en: `Discounted price = ${price} × (100 - ${discount})% = ${price} × ${(100 - discount) / 100} = ${discountedPrice}\nWith tax = ${discountedPrice} × (100 + ${tax})% = ${discountedPrice} × ${(100 + tax) / 100} = ${finalPrice.toFixed(2)}\nRounded = ${Math.round(finalPrice)} baht`,
+      difficulty: 'hard',
+      topic: 'percentage'
     });
   }
   
@@ -332,11 +392,16 @@ const generateHardQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `กำหนดให้ f(x) = ${a}x + ${b} จงหาค่าของ f(${x})`,
-      options: options.map(String),
+      category: 'mathematics',
+      question_th: `กำหนดให้ f(x) = ${a}x + ${b} จงหาค่าของ f(${x})`,
+      question_en: `Given f(x) = ${a}x + ${b}, find f(${x})`,
+      options_th: options.map(String),
+      options_en: options.map(String),
       correctAnswer: options.indexOf(result),
-      explanation: `f(${x}) = ${a}(${x}) + ${b} = ${a * x} + ${b} = ${result}`,
-      difficulty: 'hard'
+      explanation_th: `f(${x}) = ${a}(${x}) + ${b} = ${a * x} + ${b} = ${result}`,
+      explanation_en: `f(${x}) = ${a}(${x}) + ${b} = ${a * x} + ${b} = ${result}`,
+      difficulty: 'hard',
+      topic: 'functions'
     });
   }
   
@@ -357,11 +422,16 @@ const generateHardQuestions = (): MathematicsQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `กล่องมีลูกบอล ${totalBalls} ลูก เป็นสีแดง ${redBalls} ลูก สีน้ำเงิน ${blueBalls} ลูก ความน่าจะเป็นที่จะหยิบได้ลูกบอลสีแดงคือเท่าไร`,
-      options,
+      category: 'mathematics',
+      question_th: `กล่องมีลูกบอล ${totalBalls} ลูก เป็นสีแดง ${redBalls} ลูก สีน้ำเงิน ${blueBalls} ลูก ความน่าจะเป็นที่จะหยิบได้ลูกบอลสีแดงคือเท่าไร`,
+      question_en: `A box has ${totalBalls} balls: ${redBalls} red and ${blueBalls} blue. What is the probability of drawing a red ball?`,
+      options_th: options,
+      options_en: options,
       correctAnswer: options.indexOf(probability),
-      explanation: `ความน่าจะเป็น = จำนวนเหตุการณ์ที่สนใจ / จำนวนเหตุการณ์ทั้งหมด\n= ${redBalls} / ${totalBalls} = ${(redBalls / totalBalls).toFixed(4)} ≈ ${probability}`,
-      difficulty: 'hard'
+      explanation_th: `ความน่าจะเป็น = จำนวนเหตุการณ์ที่สนใจ / จำนวนเหตุการณ์ทั้งหมด\n= ${redBalls} / ${totalBalls} = ${(redBalls / totalBalls).toFixed(4)} ≈ ${probability}`,
+      explanation_en: `Probability = Favorable outcomes / Total outcomes\n= ${redBalls} / ${totalBalls} = ${(redBalls / totalBalls).toFixed(4)} ≈ ${probability}`,
+      difficulty: 'hard',
+      topic: 'probability'
     });
   }
   
@@ -369,7 +439,7 @@ const generateHardQuestions = (): MathematicsQuestion[] => {
 };
 
 // Export ข้อสอบทั้งหมด
-export const generateAllMathematicsQuestions = (): MathematicsQuestion[] => {
+export const generateAllMathematicsQuestions = (): MathQuestion[] => {
   const easy = generateEasyQuestions();
   const medium = generateMediumQuestions();
   const hard = generateHardQuestions();
@@ -382,14 +452,15 @@ export const generateAllMathematicsQuestions = (): MathematicsQuestion[] => {
   return [...easy, ...medium, ...hard];
 };
 
-// Run generator
-if (require.main === module) {
-  const allQuestions = generateAllMathematicsQuestions();
-  console.log('\nSample questions:');
-  allQuestions.slice(0, 5).forEach(q => {
-    console.log(`\nQ${q.id}: ${q.question}`);
-    console.log(`Options: ${q.options.join(', ')}`);
-    console.log(`Answer: ${q.options[q.correctAnswer]}`);
-    console.log(`Explanation: ${q.explanation}`);
-  });
-}
+// Run generator (Node.js environment only)
+// Uncomment below when running in Node.js with @types/node installed
+// if (require.main === module) {
+//   const allQuestions = generateAllMathematicsQuestions();
+//   console.log('\nSample questions:');
+//   allQuestions.slice(0, 5).forEach(q => {
+//     console.log(`\nQ${q.id}: ${q.question_th}`);
+//     console.log(`Options: ${q.options_th.join(', ')}`);
+//     console.log(`Answer: ${q.options_th[q.correctAnswer]}`);
+//     console.log(`Explanation: ${q.explanation_th}`);
+//   });
+// }

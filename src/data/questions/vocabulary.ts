@@ -1,6 +1,7 @@
 // ข้อสอบคำศัพท์ภาษาอังกฤษ (Vocabulary)
 export interface VocabularyQuestion {
   id: number;
+  category: 'vocabulary';
   questionType: 'synonym' | 'antonym' | 'definition' | 'fillInBlank';
   word: string;
   question_th: string;
@@ -16,6 +17,7 @@ export interface VocabularyQuestion {
 export const vocabularyQuestions: VocabularyQuestion[] = [
   {
     id: 1,
+    category: 'vocabulary',
     questionType: 'synonym',
     word: 'Happy',
     question_th: 'คำใดมีความหมายเหมือนกับ "Happy"?',

@@ -35,7 +35,7 @@ const generateEasyQuestions = (): SymbolLogicQuestion[] => {
     const operations = ['+', '-', '×', '÷'];
     const op = operations[randomInt(0, 3)];
     
-    let answer: number;
+    let answer: number = 0;
     switch(op) {
       case '+': answer = a + b; break;
       case '-': answer = a - b; break;
@@ -63,8 +63,8 @@ const generateEasyQuestions = (): SymbolLogicQuestion[] => {
     questions.push({
       id: questionId++,
       question: `ถ้า ${op} หมายถึง ${symbols[op as keyof typeof symbols]} แล้ว ${a} ${op} ${b} = ?`,
+      symbols: { [op]: symbols[op as keyof typeof symbols] },
       expression: `${a} ${op} ${b}`,
-      symbolMeaning: `${op} = ${symbols[op as keyof typeof symbols]}`,
       options: shuffledOptions.map(String),
       correctAnswer: correctIndex,
       explanation: `${op} หมายถึง ${symbols[op as keyof typeof symbols]}, ดังนั้น ${a} ${op} ${b} = ${answer}`,
@@ -79,7 +79,7 @@ const generateEasyQuestions = (): SymbolLogicQuestion[] => {
     const comparisons = ['>', '<', '=', '≥', '≤'];
     const comp = comparisons[randomInt(0, 4)];
     
-    let isTrue: boolean;
+    let isTrue: boolean = false;
     switch(comp) {
       case '>': isTrue = a > b; break;
       case '<': isTrue = a < b; break;
@@ -91,8 +91,8 @@ const generateEasyQuestions = (): SymbolLogicQuestion[] => {
     questions.push({
       id: questionId++,
       question: `ถ้า ${comp} หมายถึง ${symbols[comp as keyof typeof symbols]} ข้อใดถูกต้อง`,
+      symbols: { [comp]: symbols[comp as keyof typeof symbols] },
       expression: `${a} ${comp} ${b}`,
-      symbolMeaning: `${comp} = ${symbols[comp as keyof typeof symbols]}`,
       options: ['จริง', 'เท็จ'],
       correctAnswer: isTrue ? 0 : 1,
       explanation: `${a} ${symbols[comp as keyof typeof symbols]} ${b} เป็น ${isTrue ? 'จริง' : 'เท็จ'}`,
@@ -126,7 +126,7 @@ const generateMediumQuestions = (): SymbolLogicQuestion[] => {
       id: questionId++,
       question: `ถ้า A = ${a}, B = ${b}, C = ${c} แล้ว (A + B) × C = ?`,
       expression: `(A + B) × C`,
-      symbolMeaning: `A = ${a}, B = ${b}, C = ${c}`,
+      symbols: { A: String(a), B: String(b), C: String(c) },
       options: options.map(String),
       correctAnswer: options.indexOf(answer),
       explanation: `(A + B) × C = (${a} + ${b}) × ${c} = ${a + b} × ${c} = ${answer}`,
@@ -151,7 +151,7 @@ const generateMediumQuestions = (): SymbolLogicQuestion[] => {
       id: questionId++,
       question: `ถ้า x = ${x} และ y = ${y} แล้ว 2x + 3y = ?`,
       expression: `2x + 3y`,
-      symbolMeaning: `x = ${x}, y = ${y}`,
+      symbols: { x: String(x), y: String(y) },
       options: options.map(String),
       correctAnswer: options.indexOf(result),
       explanation: `2x + 3y = 2(${x}) + 3(${y}) = ${2 * x} + ${3 * y} = ${result}`,
@@ -191,7 +191,7 @@ const generateHardQuestions = (): SymbolLogicQuestion[] => {
       id: questionId++,
       question: `กำหนดให้: ถ้า ${condition} แล้ว y = ${x > 10 ? '2x' : 'x + 5'} ถ้า x = ${x} แล้ว y = ?`,
       expression: `y = ?`,
-      symbolMeaning: `ถ้า x > 10 แล้ว y = 2x, มิฉะนั้น y = x + 5`,
+      symbols: { condition },
       options: options.map(String),
       correctAnswer: options.indexOf(y),
       explanation: `x = ${x}, ${condition}, ดังนั้น y = ${y}`,
@@ -235,7 +235,7 @@ const generateHardQuestions = (): SymbolLogicQuestion[] => {
 
 ถ้า a = ${a}, b = ${b}, c = ${c} แล้ว ผลลัพธ์ = ?`,
       expression: `?`,
-      symbolMeaning: `a = ${a}, b = ${b}, c = ${c}`,
+      symbols: { a: String(a), b: String(b), c: String(c) },
       options: options.map(String),
       correctAnswer: options.indexOf(result),
       explanation: explanation,

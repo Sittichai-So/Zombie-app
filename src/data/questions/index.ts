@@ -3,7 +3,7 @@ export { generateAllSeriesQuestions } from './generators/series.generator';
 export { generateAllMathematicsQuestions } from './generators/mathematics.generator';
 export { generateAllAnalogyQuestions } from './generators/analogy.generator';
 export { generateAllSymbolLogicQuestions } from './generators/symbolLogic.generator';
-export { generateAllTablesGraphQuestions } from './generators/tablesGraph.generator';
+export { generateAllTableGraphQuestions } from './generators/tablesGraph.generator';
 export { generateAllGrammarQuestions } from './generators/grammar.generator';
 export { generateAllVocabularyQuestions } from './generators/vocabulary.generator';
 

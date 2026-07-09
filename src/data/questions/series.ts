@@ -1,6 +1,7 @@
 // ข้อสอบอนุกรมตัวเลขและตรรกะ
 export interface SeriesQuestion {
   id: number;
+  category: 'series';
   question: string;
   series: (number | string)[];
   options: number[];
@@ -12,6 +13,7 @@ export interface SeriesQuestion {
 export const seriesQuestions: SeriesQuestion[] = [
   {
     id: 1,
+    category: 'series',
     question: 'จงหาตัวเลขถัดไป',
     series: [2, 4, 6, 8, '?'],
     options: [9, 10, 11, 12],

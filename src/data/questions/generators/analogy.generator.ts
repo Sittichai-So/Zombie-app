@@ -105,7 +105,7 @@ const generateEasyQuestions = (): AnalogyQuestion[] => {
   const questions: AnalogyQuestion[] = [];
   
   // ใช้ pattern พื้นฐาน 100 ข้อ
-  const patterns = Object.values(analogyPatterns).flat();
+  const patterns = Object.values(analogyPatterns).reduce((acc, val) => acc.concat(val), []);
   
   for (let i = 0; i < 100; i++) {
     const pattern = patterns[i % patterns.length];
@@ -117,11 +117,16 @@ const generateEasyQuestions = (): AnalogyQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `ปากกา : เขียน  ไม้กวาด : ?`,
-      analogy: [word1, word2, options[0], '?'],
-      options,
+      category: 'analogy',
+      question_th: `${word1} : ${word2} :: ${options[0]} : ?`,
+      question_en: `${word1} : ${word2} :: ${options[0]} : ?`,
+      pair_th: [word1, word2],
+      pair_en: [word1, word2],
+      options_th: options,
+      options_en: options,
       correctAnswer: correctIndex,
-      explanation: `${word1} ใช้สำหรับ ${word2} เช่นเดียวกับ ${options[0]} ใช้สำหรับ ${word2}`,
+      explanation_th: `${word1} ใช้สำหรับ ${word2} เช่นเดียวกับ ${options[0]} ใช้สำหรับ ${word2}`,
+      explanation_en: `${word1} is used to ${word2} as ${options[0]} is used to ${word2}`,
       difficulty: 'easy'
     });
   }
@@ -152,11 +157,16 @@ const generateMediumQuestions = (): AnalogyQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `${w1} : ${w2} :: ${w3} : ?`,
-      analogy: [w1, w2, w3, '?'],
-      options: [w4, 'ดี', 'แย่', 'เร็ว'],
+      category: 'analogy',
+      question_th: `${w1} : ${w2} :: ${w3} : ?`,
+      question_en: `${w1} : ${w2} :: ${w3} : ?`,
+      pair_th: [w1, w2],
+      pair_en: [w1, w2],
+      options_th: [w4, 'ดี', 'แย่', 'เร็ว'],
+      options_en: [w4, 'good', 'bad', 'fast'],
       correctAnswer: 0,
-      explanation: `${w1} ทำให้เกิด ${w2} เช่นเดียวกับ ${w3} ทำให้เกิด ${w4}`,
+      explanation_th: `${w1} ทำให้เกิด ${w2} เช่นเดียวกับ ${w3} ทำให้เกิด ${w4}`,
+      explanation_en: `${w1} causes ${w2} as ${w3} causes ${w4}`,
       difficulty: 'medium'
     });
   }
@@ -175,11 +185,16 @@ const generateMediumQuestions = (): AnalogyQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `${part1} : ${whole1} :: ${part2} : ?`,
-      analogy: [part1, whole1, part2, '?'],
-      options: [whole2, 'ส่วน', 'ชิ้น', 'ใหญ่'],
+      category: 'analogy',
+      question_th: `${part1} : ${whole1} :: ${part2} : ?`,
+      question_en: `${part1} : ${whole1} :: ${part2} : ?`,
+      pair_th: [part1, whole1],
+      pair_en: [part1, whole1],
+      options_th: [whole2, 'ส่วน', 'ชิ้น', 'ใหญ่'],
+      options_en: [whole2, 'part', 'piece', 'big'],
       correctAnswer: 0,
-      explanation: `${part1} เป็นส่วนหนึ่งของ ${whole1} เช่นเดียวกับ ${part2} เป็นส่วนหนึ่งของ ${whole2}`,
+      explanation_th: `${part1} เป็นส่วนหนึ่งของ ${whole1} เช่นเดียวกับ ${part2} เป็นส่วนหนึ่งของ ${whole2}`,
+      explanation_en: `${part1} is part of ${whole1} as ${part2} is part of ${whole2}`,
       difficulty: 'medium'
     });
   }
@@ -208,11 +223,16 @@ const generateHardQuestions = (): AnalogyQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `${v1} : ${t1} :: ${v2} : ?`,
-      analogy: [v1, t1, v2, '?'],
-      options: [t2, 'ดี', 'ชั่ว', 'กลาง'],
+      category: 'analogy',
+      question_th: `${v1} : ${t1} :: ${v2} : ?`,
+      question_en: `${v1} : ${t1} :: ${v2} : ?`,
+      pair_th: [v1, t1],
+      pair_en: [v1, t1],
+      options_th: [t2, 'ดี', 'ชั่ว', 'กลาง'],
+      options_en: [t2, 'good', 'evil', 'neutral'],
       correctAnswer: 0,
-      explanation: `${v1} นำไปสู่ ${t1} เช่นเดียวกับ ${v2} นำไปสู่ ${t2}`,
+      explanation_th: `${v1} นำไปสู่ ${t1} เช่นเดียวกับ ${v2} นำไปสู่ ${t2}`,
+      explanation_en: `${v1} leads to ${t1} as ${v2} leads to ${t2}`,
       difficulty: 'hard'
     });
   }
@@ -234,11 +254,16 @@ const generateHardQuestions = (): AnalogyQuestion[] => {
     
     questions.push({
       id: questionId++,
-      question: `${o1} : ${o2} :: ${o3} : ?`,
-      analogy: [o1, o2, o3, '?'],
-      options: [o4, 'กลาง', 'ใหญ่', 'เล็ก'],
+      category: 'analogy',
+      question_th: `${o1} : ${o2} :: ${o3} : ?`,
+      question_en: `${o1} : ${o2} :: ${o3} : ?`,
+      pair_th: [o1, o2],
+      pair_en: [o1, o2],
+      options_th: [o4, 'กลาง', 'ใหญ่', 'เล็ก'],
+      options_en: [o4, 'middle', 'big', 'small'],
       correctAnswer: 0,
-      explanation: `${o1} เป็นคำตรงข้ามของ ${o2} เช่นเดียวกับ ${o3} เป็นคำตรงข้ามของ ${o4}`,
+      explanation_th: `${o1} เป็นคำตรงข้ามของ ${o2} เช่นเดียวกับ ${o3} เป็นคำตรงข้ามของ ${o4}`,
+      explanation_en: `${o1} is opposite of ${o2} as ${o3} is opposite of ${o4}`,
       difficulty: 'hard'
     });
   }
@@ -260,15 +285,16 @@ export const generateAllAnalogyQuestions = (): AnalogyQuestion[] => {
   return [...easy, ...medium, ...hard];
 };
 
-// Run generator
-if (require.main === module) {
-  const allQuestions = generateAllAnalogyQuestions();
-  console.log('\nSample questions:');
-  allQuestions.slice(0, 5).forEach(q => {
-    console.log(`\nQ${q.id}: ${q.question}`);
-    console.log(`Analogy: ${q.analogy.join(' : ')}`);
-    console.log(`Options: ${q.options.join(', ')}`);
-    console.log(`Answer: ${q.options[q.correctAnswer]}`);
-    console.log(`Explanation: ${q.explanation}`);
-  });
-}
+// Run generator (Node.js environment only)
+// Uncomment below when running in Node.js with @types/node installed
+// if (require.main === module) {
+//   const allQuestions = generateAllAnalogyQuestions();
+//   console.log('\nSample questions:');
+//   allQuestions.slice(0, 5).forEach(q => {
+//     console.log(`\nQ${q.id}: ${q.question_th}`);
+//     console.log(`Pair: ${q.pair_th.join(' : ')}`);
+//     console.log(`Options: ${q.options_th.join(', ')}`);
+//     console.log(`Answer: ${q.options_th[q.correctAnswer]}`);
+//     console.log(`Explanation: ${q.explanation_th}`);
+//   });
+// }

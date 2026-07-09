@@ -1,6 +1,7 @@
 // ข้อสอบอุปมาอุปไมย (Analogy)
 export interface AnalogyQuestion {
   id: number;
+  category: 'analogy';
   question_th: string;
   question_en: string;
   pair_th: [string, string];
@@ -16,6 +17,7 @@ export interface AnalogyQuestion {
 export const analogyQuestions: AnalogyQuestion[] = [
   {
     id: 1,
+    category: 'analogy',
     question_th: 'ปากกา : เขียน :: ค้อน : ?',
     question_en: 'Pen : Write :: Hammer : ?',
     pair_th: ['ปากกา', 'เขียน'],

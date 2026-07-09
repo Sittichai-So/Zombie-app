@@ -1,6 +1,7 @@
 // ข้อสอบตรรกะสัญลักษณ์ (Symbol Logic)
 export interface SymbolLogicQuestion {
   id: number;
+  category: 'symbolLogic';
   question: string;
   symbols: Record<string, string>;
   expression: string;
@@ -13,6 +14,7 @@ export interface SymbolLogicQuestion {
 export const symbolLogicQuestions: SymbolLogicQuestion[] = [
   {
     id: 1,
+    category: 'symbolLogic',
     question: 'ถ้า A = +, B = -, C = ×, D = ÷ แล้ว 4 A 3 B 2 = ?',
     symbols: { 'A': '+', 'B': '-', 'C': '×', 'D': '÷' },
     expression: '4 A 3 B 2',

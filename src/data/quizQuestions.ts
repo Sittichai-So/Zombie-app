@@ -3,9 +3,9 @@ import { generateAllSeriesQuestions } from './questions/generators/series.genera
 import { generateAllMathematicsQuestions } from './questions/generators/mathematics.generator';
 import { generateAllAnalogyQuestions } from './questions/generators/analogy.generator';
 import { generateAllSymbolLogicQuestions } from './questions/generators/symbolLogic.generator';
-import { generateAllTablesGraphQuestions } from './questions/generators/tablesGraph.generator';
+import { generateAllTableGraphQuestions } from './questions/generators/tablesGraph.generator';
 import { generateAllGrammarQuestions } from './questions/generators/grammar.generator';
-import { generateAllVocabularyQuestions } from './questions/generators/vocabulary.generator';
+import { generateAllVocabularyQuestions, VocabularyQuestion } from './questions/generators/vocabulary.generator';
 
 export interface Question {
   id: number;
@@ -22,7 +22,7 @@ export interface Question {
 
 const convertSeriesQuestion = (q: any): Question => ({
   id: q.id,
-  category: 'series',
+  category: q.category || 'series',
   difficulty: q.difficulty,
   question_th: `อนุกรม: ${q.question}`,
   question_en: `Series: ${q.question}`,
@@ -35,20 +35,20 @@ const convertSeriesQuestion = (q: any): Question => ({
 
 const convertMathematicsQuestion = (q: any): Question => ({
   id: q.id,
-  category: 'mathematics',
+  category: q.category || 'mathematics',
   difficulty: q.difficulty,
-  question_th: q.question,
-  question_en: q.question,
-  options_th: q.options.map(String),
-  options_en: q.options.map(String),
+  question_th: q.question_th,
+  question_en: q.question_en,
+  options_th: q.options_th,
+  options_en: q.options_en,
   correctAnswer: q.correctAnswer,
-  explanation_th: q.explanation,
-  explanation_en: q.explanation
+  explanation_th: q.explanation_th,
+  explanation_en: q.explanation_en
 });
 
 const convertAnalogyQuestion = (q: any): Question => ({
   id: q.id,
-  category: 'analogy',
+  category: q.category || 'analogy',
   difficulty: q.difficulty,
   question_th: q.question_th,
   question_en: q.question_en,
@@ -61,7 +61,7 @@ const convertAnalogyQuestion = (q: any): Question => ({
 
 const convertSymbolLogicQuestion = (q: any): Question => ({
   id: q.id,
-  category: 'symbolLogic',
+  category: q.category || 'symbolLogic',
   difficulty: q.difficulty,
   question_th: q.question_th,
   question_en: q.question_en,
@@ -74,7 +74,7 @@ const convertSymbolLogicQuestion = (q: any): Question => ({
 
 const convertTablesGraphQuestion = (q: any): Question => ({
   id: q.id,
-  category: 'tablesGraph',
+  category: q.category || 'tablesGraph',
   difficulty: q.difficulty,
   question_th: q.question_th,
   question_en: q.question_en,
@@ -87,28 +87,28 @@ const convertTablesGraphQuestion = (q: any): Question => ({
 
 const convertGrammarQuestion = (q: any): Question => ({
   id: q.id,
-  category: 'grammar',
+  category: q.category || 'grammar',
   difficulty: q.difficulty,
-  question_th: q.question,
-  question_en: q.question,
-  options_th: q.options,
-  options_en: q.options,
+  question_th: q.question_th,
+  question_en: q.question_en,
+  options_th: q.options_th,
+  options_en: q.options_en,
   correctAnswer: q.correctAnswer,
-  explanation_th: q.explanation,
-  explanation_en: q.explanation
+  explanation_th: q.explanation_th,
+  explanation_en: q.explanation_en
 });
 
-const convertVocabularyQuestion = (q: any): Question => ({
+const convertVocabularyQuestion = (q: VocabularyQuestion): Question => ({
   id: q.id,
-  category: 'vocabulary',
+  category: q.category || 'vocabulary',
   difficulty: q.difficulty,
-  question_th: q.question,
-  question_en: q.question,
-  options_th: q.options,
-  options_en: q.options,
+  question_th: q.question_th,
+  question_en: q.question_en,
+  options_th: q.options_th,
+  options_en: q.options_en,
   correctAnswer: q.correctAnswer,
-  explanation_th: q.explanation,
-  explanation_en: q.explanation
+  explanation_th: q.explanation_th,
+  explanation_en: q.explanation_en
 });
 
 // Generate all questions from generators
@@ -118,7 +118,7 @@ const generatedQuestions: Question[] = [
   ...generateAllMathematicsQuestions().map(convertMathematicsQuestion),
   ...generateAllAnalogyQuestions().map(convertAnalogyQuestion),
   ...generateAllSymbolLogicQuestions().map(convertSymbolLogicQuestion),
-  ...generateAllTablesGraphQuestions().map(convertTablesGraphQuestion),
+  ...generateAllTableGraphQuestions().map(convertTablesGraphQuestion),
   
   // Phase 2: English (550 ข้อ)
   ...generateAllGrammarQuestions().map(convertGrammarQuestion),

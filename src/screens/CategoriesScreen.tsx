@@ -3,33 +3,52 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Platform,
   TouchableOpacity,
-  Animated,
-  PanResponder,
-  LayoutAnimation,
-  UIManager,
   Dimensions,
+  Animated,
+  FlatList,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useGame } from '../context/GameContext';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// ---- Design tokens -------------------------------------------------------
-const BG = '#000000';
-const SURFACE = '#111214';
+const BG = '#0A0A0F';
+const SURFACE = '#16171F';
+const SURFACE_RAISED = '#1E202B';
 const WHITE = '#FFFFFF';
 const MUTED = '#9AA0AC';
+const MUTED_LIGHT = '#6B7280';
 const INK = '#000000';
-const SWIPE_THRESHOLD = 70;
+const LINE = 'rgba(255,255,255,0.08)';
+
+// ---- Carousel geometry ----
+const ITEM_WIDTH = SCREEN_W * 0.64;
+const ITEM_SPACING = 14;
+const ITEM_FULL_WIDTH = ITEM_WIDTH + ITEM_SPACING;
+const SIDE_PADDING = (SCREEN_W - ITEM_WIDTH) / 2;
+const CARD_HEIGHT = ITEM_WIDTH * 1.06;
+
+// ---- Color helpers ----
+// Darkens/lightens a hex color by a percentage. Used to build a rich
+// two-tone gradient fill out of each category's single base color.
+const shadeColor = (hex: string, percent: number) => {
+  const clean = hex.replace('#', '');
+  const num = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
+  let r = (num >> 16) + Math.round((percent / 100) * 255);
+  let g = ((num >> 8) & 0x00ff) + Math.round((percent / 100) * 255);
+  let b = (num & 0x0000ff) + Math.round((percent / 100) * 255);
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+};
 
 interface ExamCategory {
   id: string;
@@ -235,224 +254,245 @@ type NavigationProp = StackNavigationProp<RootStackParamList>;
 const CategoriesScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { player } = useGame();
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const flatListRef = useRef<FlatList<ExamCategory>>(null);
 
-  const translateX = useRef(new Animated.Value(0)).current;
-  const cardOpacity = useRef(new Animated.Value(1)).current;
+  const currentCategory = EXAM_CATEGORIES[currentIndex];
 
   const handleStart = (categoryId: string) => {
     navigation.navigate('LevelMap', { categoryId });
   };
 
   const getTotalProgress = () => {
-    const totalQuestions = EXAM_CATEGORIES.reduce((sum, cat) => sum + cat.questionCount, 0);
-    const completedQuestions = player.completedLevels?.length || 0;
-    return Math.round((completedQuestions / totalQuestions) * 100);
+    const totalCategories = EXAM_CATEGORIES.length;
+    const completedLevels = player.completedLevels?.length || 0;
+    return totalCategories > 0 ? Math.min(100, Math.round((completedLevels / totalCategories) * 100)) : 0;
   };
 
-  const animateTo = (nextIndex: number) => {
-    if (nextIndex === selectedIndex) return;
-    const direction = nextIndex > selectedIndex ? 1 : -1;
-
-    Animated.parallel([
-      Animated.timing(translateX, {
-        toValue: direction * -SCREEN_W * 0.6,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardOpacity, {
-        toValue: 0,
-        duration: 160,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setSelectedIndex(nextIndex);
-      translateX.setValue(direction * SCREEN_W * 0.6);
-      Animated.parallel([
-        Animated.spring(translateX, {
-          toValue: 0,
-          useNativeDriver: true,
-          friction: 9,
-          tension: 60,
-        }),
-        Animated.timing(cardOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
+  const scrollToIndex = (index: number) => {
+    const clamped = Math.max(0, Math.min(EXAM_CATEGORIES.length - 1, index));
+    flatListRef.current?.scrollToOffset({
+      offset: clamped * ITEM_FULL_WIDTH,
+      animated: true,
     });
+    setCurrentIndex(clamped);
   };
 
-  const goNext = () => animateTo((selectedIndex + 1) % EXAM_CATEGORIES.length);
-  const goPrev = () => animateTo((selectedIndex - 1 + EXAM_CATEGORIES.length) % EXAM_CATEGORIES.length);
+  const onMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / ITEM_FULL_WIDTH);
+    setCurrentIndex(Math.max(0, Math.min(EXAM_CATEGORIES.length - 1, index)));
+  };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_evt, gesture) =>
-        Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-      onPanResponderMove: (_evt, gesture) => {
-        translateX.setValue(gesture.dx);
-      },
-      onPanResponderRelease: (_evt, gesture) => {
-        if (gesture.dx <= -SWIPE_THRESHOLD) {
-          goNext();
-        } else if (gesture.dx >= SWIPE_THRESHOLD) {
-          goPrev();
-        } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            friction: 9,
-          }).start();
-        }
-      },
-    })
-  ).current;
+  const renderItem = ({ item, index }: { item: ExamCategory; index: number }) => {
+    const inputRange = [
+      (index - 1) * ITEM_FULL_WIDTH,
+      index * ITEM_FULL_WIDTH,
+      (index + 1) * ITEM_FULL_WIDTH,
+    ];
 
-  const current = EXAM_CATEGORIES[selectedIndex];
-  const others = EXAM_CATEGORIES.filter((_, i) => i !== selectedIndex);
+    const scale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.85, 1, 0.85],
+      extrapolate: 'clamp',
+    });
+    // Frosted-glass simulation for side (non-focused) cards: the gradient
+    // washes out, a translucent white frost layer sits on top, and the
+    // readable content fades away, leaving only a hazy tint of the color.
+    const colorOpacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.4, 1, 0.4],
+      extrapolate: 'clamp',
+    });
+    const frostOpacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.62, 0, 0.62],
+      extrapolate: 'clamp',
+    });
+    const contentOpacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0, 1, 0],
+      extrapolate: 'clamp',
+    });
+    const glowOpacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0, 0.55, 0],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <View style={{ width: ITEM_FULL_WIDTH, alignItems: 'center' }}>
+        {/* Ambient glow that only appears behind the focused card */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.cardGlow,
+            { backgroundColor: item.color, opacity: glowOpacity },
+          ]}
+        />
+
+        <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+          <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: colorOpacity }]}>
+            <LinearGradient
+              colors={[shadeColor(item.color, 12), item.color, shadeColor(item.color, -22)]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+          </Animated.View>
+
+          {/* Subtle top sheen for a glassy highlight */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(255,255,255,0.28)', 'rgba(255,255,255,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 0.6 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFillObject, styles.frostLayer, { opacity: frostOpacity }]}
+          />
+
+          <View style={styles.cardBorder} pointerEvents="none" />
+
+          <TouchableOpacity
+            style={styles.cardTouchable}
+            activeOpacity={0.9}
+            onPress={() => (index === currentIndex ? handleStart(item.id) : scrollToIndex(index))}
+          >
+            <Animated.View style={{ flex: 1, justifyContent: 'space-between', opacity: contentOpacity }}>
+              <View style={styles.iconCircle}>
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.18)']}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <Text style={styles.iconText}>{item.icon}</Text>
+              </View>
+
+              <View style={styles.cardBottomScrim}>
+                <View style={styles.kickerRow}>
+                  <View style={[styles.kickerBar, { backgroundColor: item.onColor }]} />
+                  <Text style={[styles.cardTitleEN, { color: item.onColor }]}>
+                    {item.titleEN.toUpperCase()}
+                  </Text>
+                </View>
+                <Text style={[styles.cardTitle, { color: item.onColor }]} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <View style={styles.metaPillOnCard}>
+                  <View style={[styles.metaDotOnCard, { backgroundColor: item.onColor }]} />
+                  <Text style={[styles.metaTextOnCard, { color: item.onColor }]}>
+                    {item.questionCount} ข้อ · ผ่าน {item.passingScore}%
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Ambient color blobs that tint the whole screen based on the selection */}
+      <View style={styles.blobTop} pointerEvents="none">
+        <LinearGradient
+          colors={[currentCategory.color, 'transparent']}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </View>
+      <View style={styles.blobBottom} pointerEvents="none">
+        <LinearGradient
+          colors={[shadeColor(currentCategory.color, -10), 'transparent']}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </View>
+
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.mainTitle}>ข้อสอบ ก.พ.</Text>
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.eyebrow}>สอบราชการ</Text>
+          <Text style={styles.mainTitle}>ข้อสอบ ก.พ.</Text>
+        </View>
         <View style={styles.progressPill}>
+          <View style={[styles.progressDot, { backgroundColor: currentCategory.color }]} />
           <Text style={styles.progressPillText}>{getTotalProgress()}%</Text>
         </View>
       </View>
-      <Text style={styles.subtitle}>ปัดหรือแตะแท็บเพื่อเปลี่ยนหมวดหมู่</Text>
+      <Text style={styles.subtitle}>เลื่อนเพื่อเลือกหมวดหมู่ที่ต้องการฝึกฝน</Text>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Collapsed tabs — tap to bring to front */}
-        <View style={styles.tabStack}>
-          {others.map((cat, idx) => (
-            <TouchableOpacity
-              key={cat.id}
-              activeOpacity={0.85}
-              onPress={() => animateTo(EXAM_CATEGORIES.findIndex((c) => c.id === cat.id))}
-              style={[
-                styles.tabPill,
-                {
-                  backgroundColor: cat.color,
-                  zIndex: idx + 1,
-                  marginTop: idx === 0 ? 0 : -20,
-                },
-              ]}
-            >
-              <Text style={[styles.tabPillText, { color: cat.onColor }]} numberOfLines={1}>
-                {cat.titleEN.toUpperCase()}
-              </Text>
-              <Text style={[styles.tabPillHint, { color: cat.onColor }]}>แตะเพื่อดู</Text>
-            </TouchableOpacity>
-          ))}
+      <View style={styles.carouselArea}>
+        <Animated.FlatList
+          ref={flatListRef}
+          data={EXAM_CATEGORIES}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={ITEM_FULL_WIDTH}
+          decelerationRate="fast"
+          bounces={false}
+          contentContainerStyle={{ paddingHorizontal: SIDE_PADDING, alignItems: 'center' }}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+            useNativeDriver: true,
+          })}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={onMomentumScrollEnd}
+        />
+      </View>
 
-          {/* Front card — swipeable */}
-          <Animated.View
-            {...panResponder.panHandlers}
+      <View style={styles.dotsRow}>
+        {EXAM_CATEGORIES.map((cat, i) => (
+          <View
+            key={cat.id}
             style={[
-              styles.expandedCard,
-              {
-                backgroundColor: current.color,
-                marginTop: others.length ? -20 : 0,
-                transform: [{ translateX }],
-                opacity: cardOpacity,
-              },
+              styles.dot,
+              i === currentIndex && [styles.dotActive, { backgroundColor: cat.color, shadowColor: cat.color }],
             ]}
-          >
-            <View style={styles.cardTopRow}>
-              <View style={styles.cardTitleBlock}>
-                <Text style={[styles.categoryTitleEN, { color: current.onColor }]}>{current.titleEN}</Text>
-                <Text style={[styles.categoryTitle, { color: current.onColor }]}>{current.title}</Text>
-              </View>
-              <TouchableOpacity style={styles.expandButton} onPress={() => handleStart(current.id)}>
-                <Text style={styles.expandButtonText}>↗</Text>
-              </TouchableOpacity>
+          />
+        ))}
+      </View>
+
+      <View style={styles.detailCard}>
+        <LinearGradient
+          colors={[currentCategory.color, 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.detailAccentBar}
+        />
+        <Text style={styles.detailLabel}>เกี่ยวกับหมวดนี้</Text>
+        <Text style={styles.detailDescription}>{currentCategory.description}</Text>
+        <View style={styles.topicsWrap}>
+          {currentCategory.topics.map((topic, index) => (
+            <View key={index} style={styles.topicChip}>
+              <View style={[styles.topicDot, { backgroundColor: currentCategory.color }]} />
+              <Text style={styles.topicChipText}>{topic}</Text>
             </View>
-
-            <Text style={[styles.categoryDescription, { color: current.onColor }]}>{current.description}</Text>
-
-            <View style={styles.statPillRow}>
-              <View style={styles.statPill}>
-                <View style={[styles.statDot, { backgroundColor: current.dotColor }]} />
-                <Text style={styles.statPillText}>{current.questionCount} ข้อ</Text>
-              </View>
-              <View style={styles.statPill}>
-                <View style={[styles.statDot, { backgroundColor: current.dotColor }]} />
-                <Text style={styles.statPillText}>ผ่าน {current.passingScore}%</Text>
-              </View>
-            </View>
-
-            <View style={styles.topicsList}>
-              {current.topics.map((topic, index) => (
-                <Text key={index} style={[styles.topicText, { color: current.onColor }]}>
-                  {topic}
-                  {index < current.topics.length - 1 ? '  ·  ' : ''}
-                </Text>
-              ))}
-            </View>
-
-            <View style={styles.cardIconBadge}>
-              <Text style={styles.cardIconText}>{current.icon}</Text>
-            </View>
-          </Animated.View>
-
-          {/* Side nudge buttons for discoverability */}
-          <TouchableOpacity style={[styles.sideArrow, styles.sideArrowLeft]} onPress={goPrev}>
-            <Text style={styles.sideArrowText}>‹</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.sideArrow, styles.sideArrowRight]} onPress={goNext}>
-            <Text style={styles.sideArrowText}>›</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Pagination dots */}
-        <View style={styles.dotsRow}>
-          {EXAM_CATEGORIES.map((cat, i) => (
-            <TouchableOpacity key={cat.id} onPress={() => animateTo(i)} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
-              <View
-                style={[
-                  styles.dot,
-                  { backgroundColor: i === selectedIndex ? cat.color : '#2A2D35' },
-                  i === selectedIndex && styles.dotActive,
-                ]}
-              />
-            </TouchableOpacity>
           ))}
         </View>
-
         <TouchableOpacity
-          style={[styles.startButton, { backgroundColor: current.color }]}
-          onPress={() => handleStart(current.id)}
+          onPress={() => handleStart(currentCategory.id)}
           activeOpacity={0.9}
+          style={[styles.startButtonWrap, { shadowColor: currentCategory.color }]}
         >
-          <Text style={[styles.startButtonText, { color: current.onColor }]}>
-            เริ่มทำข้อสอบ!!
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.infoCard}>
-          <View style={styles.infoIconBadge}>
-            <Text style={styles.infoIcon}>ℹ️</Text>
-          </View>
-          <View style={styles.infoTexts}>
-            <Text style={styles.infoTitle}>เกณฑ์การผ่าน</Text>
-            <Text style={styles.infoDescription}>
-              ผู้สมัครระดับปริญญาตรีต้องได้คะแนนรวมไม่ต่ำกว่า 60%{'\n'}
-              ระดับปริญญาโทต้องได้คะแนนไม่ต่ำกว่า 65%
+          <LinearGradient
+            colors={[shadeColor(currentCategory.color, 10), currentCategory.color, shadeColor(currentCategory.color, -18)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.startButton}
+          >
+            <Text style={[styles.startButtonText, { color: currentCategory.onColor }]}>
+              เริ่มทำข้อสอบ
             </Text>
-          </View>
-        </View>
-      </ScrollView>
+            <Text style={[styles.startButtonArrow, { color: currentCategory.onColor }]}>→</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -462,6 +502,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BG,
   },
+
+  // ---- Ambient background ----
+  blobTop: {
+    position: 'absolute',
+    top: -180,
+    left: -80,
+    width: SCREEN_W * 1.2,
+    height: 360,
+    opacity: 0.16,
+    transform: [{ rotate: '-8deg' }],
+  },
+  blobBottom: {
+    position: 'absolute',
+    bottom: -220,
+    right: -100,
+    width: SCREEN_W * 1.2,
+    height: 360,
+    opacity: 0.12,
+    transform: [{ rotate: '10deg' }],
+  },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -473,32 +534,53 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: WHITE,
+    backgroundColor: SURFACE_RAISED,
+    borderWidth: 1,
+    borderColor: LINE,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backButtonText: {
     fontSize: 18,
     fontWeight: '900',
-    color: INK,
+    color: WHITE,
+  },
+  headerTitleWrap: {
+    flex: 1,
+  },
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: MUTED_LIGHT,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   mainTitle: {
-    flex: 1,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: WHITE,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   progressPill: {
-    backgroundColor: SURFACE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: SURFACE_RAISED,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  progressDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   progressPillText: {
     color: WHITE,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   subtitle: {
@@ -506,220 +588,216 @@ const styles = StyleSheet.create({
     color: MUTED,
     fontWeight: '600',
     paddingHorizontal: 20,
-    paddingLeft: 74,
-    marginTop: 2,
+    marginTop: 6,
+    marginBottom: 10,
   },
-  scroll: {
+
+  // ---- Carousel ----
+  carouselArea: {
+    height: CARD_HEIGHT + 40,
+    justifyContent: 'center',
+  },
+  cardGlow: {
+    position: 'absolute',
+    width: ITEM_WIDTH * 0.9,
+    height: CARD_HEIGHT * 0.9,
+    borderRadius: 999,
+    alignSelf: 'center',
+  },
+  card: {
+    width: ITEM_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 30,
+    overflow: 'hidden',
+    backgroundColor: SURFACE_RAISED,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.45,
+    shadowRadius: 26,
+    elevation: 14,
+  },
+  cardBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  cardTouchable: {
     flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingTop: 16,
-    paddingBottom: 100,
-  },
-  tabStack: {
-    position: 'relative',
-  },
-  tabPill: {
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 22,
-    flexDirection: 'row',
+    padding: 22,
     justifyContent: 'space-between',
+  },
+  frostLayer: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  iconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 17,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
-  tabPillText: {
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.4,
+  iconText: {
+    fontSize: 27,
   },
-  tabPillHint: {
-    fontSize: 10,
-    fontWeight: '700',
+  cardBottomScrim: {
+    alignSelf: 'stretch',
+  },
+  kickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  kickerBar: {
+    width: 14,
+    height: 2,
+    borderRadius: 1,
     opacity: 0.7,
   },
-  expandedCard: {
-    borderRadius: 28,
-    padding: 22,
-    paddingBottom: 26,
-    position: 'relative',
-    overflow: 'hidden',
-    zIndex: 10,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  cardTitleBlock: {
-    flex: 1,
-    paddingRight: 60,
-  },
-  categoryTitleEN: {
+  cardTitleEN: {
     fontSize: 11,
     fontWeight: '800',
-    opacity: 0.75,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 4,
+    letterSpacing: 1,
+    opacity: 0.7,
   },
-  categoryTitle: {
-    fontSize: 20,
+  cardTitle: {
+    fontSize: 22,
     fontWeight: '900',
-    lineHeight: 26,
-  },
-  expandButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: INK,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  expandButtonText: {
-    color: WHITE,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  categoryDescription: {
-    fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.85,
+    lineHeight: 28,
     marginBottom: 16,
   },
-  statPillRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  statPill: {
+  metaPillOnCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    gap: 7,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.28)',
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    gap: 7,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  statDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  statPillText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: INK,
-  },
-  topicsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  topicText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+  metaDotOnCard: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     opacity: 0.8,
   },
-  cardIconBadge: {
-    position: 'absolute',
-    right: -10,
-    bottom: -14,
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(0,0,0,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  metaTextOnCard: {
+    fontSize: 12,
+    fontWeight: '800',
   },
-  cardIconText: {
-    fontSize: 42,
-  },
-  sideArrow: {
-    position: 'absolute',
-    top: '58%',
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 20,
-  },
-  sideArrowLeft: {
-    left: -6,
-  },
-  sideArrowRight: {
-    right: -6,
-  },
-  sideArrowText: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: INK,
-    marginTop: -2,
-  },
+
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 18,
-    marginBottom: 18,
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 22,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: SURFACE_RAISED,
   },
   dotActive: {
-    width: 22,
+    width: 20,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
+  // ---- Detail panel ----
+  detailCard: {
+    marginHorizontal: 20,
+    backgroundColor: SURFACE,
+    borderRadius: 26,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: LINE,
+    overflow: 'hidden',
+  },
+  detailAccentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+  },
+  detailLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: MUTED_LIGHT,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  detailDescription: {
+    fontSize: 13,
+    color: MUTED,
+    fontWeight: '600',
+    lineHeight: 19,
+    marginBottom: 16,
+  },
+  topicsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  topicChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: SURFACE_RAISED,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  topicDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  topicChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: MUTED,
+  },
+  startButtonWrap: {
+    borderRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   startButton: {
-    borderRadius: 20,
+    borderRadius: 18,
     paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
+    justifyContent: 'center',
+    gap: 8,
   },
   startButtonText: {
-    fontSize: 15,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  infoCard: {
-    backgroundColor: SURFACE,
-    borderRadius: 24,
-    padding: 18,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  infoIconBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#FFC94D',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoIcon: {
-    fontSize: 24,
-  },
-  infoTexts: {
-    flex: 1,
-    gap: 4,
-  },
-  infoTitle: {
     fontSize: 14,
     fontWeight: '900',
-    color: WHITE,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  infoDescription: {
-    fontSize: 12,
-    color: MUTED,
-    lineHeight: 18,
-    fontWeight: '600',
+  startButtonArrow: {
+    fontSize: 16,
+    fontWeight: '900',
   },
 });
 

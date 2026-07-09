@@ -1,6 +1,7 @@
 // ข้อสอบตารางและกราฟ (Tables & Graphs)
 export interface TableGraphQuestion {
   id: number;
+  category: 'tablesGraph';
   title: string;
   dataType: 'table' | 'bar' | 'line' | 'pie';
   data: any;
@@ -14,6 +15,7 @@ export interface TableGraphQuestion {
 export const tableGraphQuestions: TableGraphQuestion[] = [
   {
     id: 1,
+    category: 'tablesGraph',
     title: 'ยอดขายรายเดือน',
     dataType: 'table',
     data: {

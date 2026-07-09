@@ -3,13 +3,14 @@
 
 import { VocabularyQuestion } from '../vocabulary';
 
+export type { VocabularyQuestion };
+
 let questionId = 8000;
 
 const randomInt = (min: number, max: number): number => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
-// คำศัพท์พื้นฐานสำหรับข้อสอบ
 const vocabularyData = {
   synonyms: [
     { word: 'Happy', answer: 'Joyful', options: ['Sad', 'Joyful', 'Angry', 'Tired'] },
@@ -58,6 +59,7 @@ const generateEasyQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'synonym',
       word: item.word,
       question_th: `คำพ้องความหมายของ "${item.word}" คือคำใด?`,
@@ -78,6 +80,7 @@ const generateEasyQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'antonym',
       word: item.word,
       question_th: `คำตรงข้ามของ "${item.word}" คือคำใด?`,
@@ -98,6 +101,7 @@ const generateEasyQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'definition',
       word: item.word,
       question_th: `"${item.definition}" คืออะไร?`,
@@ -114,11 +118,9 @@ const generateEasyQuestions = (): VocabularyQuestion[] => {
   return questions;
 };
 
-// Medium Questions: ปานกลาง
 const generateMediumQuestions = (): VocabularyQuestion[] => {
   const questions: VocabularyQuestion[] = [];
   
-  // 1. Context Clues - เดาความหมายจากบริบท (50 ข้อ)
   const contextSentences = [
     { sentence: 'The weather is very _____ today. The sun is shining and there are no clouds.', answer: 'sunny', options: ['sunny', 'rainy', 'cloudy', 'stormy'] },
     { sentence: 'She is very _____. She always helps people.', answer: 'kind', options: ['kind', 'mean', 'cruel', 'selfish'] },
@@ -132,6 +134,7 @@ const generateMediumQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'fillInBlank',
       word: '',
       question_th: `เติมคำในช่องว่าง: ${item.sentence}`,
@@ -152,6 +155,7 @@ const generateMediumQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'fillInBlank',
       word: item.root,
       question_th: `รูป adjective ของ "${item.root}" คืออะไร?`,
@@ -179,6 +183,7 @@ const generateMediumQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'definition',
       word: item.idiom,
       question_th: `สำนวน "${item.idiom}" หมายถึงอะไร?`,
@@ -213,6 +218,7 @@ const generateHardQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'definition',
       word: item.word,
       question_th: `"${item.word}" หมายถึงอะไร?`,
@@ -240,6 +246,7 @@ const generateHardQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'synonym',
       word: item.word,
       question_th: `คำพ้องความหมายของ "${item.word}" คือคำใด?`,
@@ -267,6 +274,7 @@ const generateHardQuestions = (): VocabularyQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'vocabulary',
       questionType: 'definition',
       word: item.verb,
       question_th: `กริยาวลี "${item.verb}" หมายถึงอะไร?`,
@@ -297,16 +305,17 @@ export const generateAllVocabularyQuestions = (): VocabularyQuestion[] => {
   return [...easy, ...medium, ...hard];
 };
 
-// Run generator
-if (require.main === module) {
-  const allQuestions = generateAllVocabularyQuestions();
-  console.log('\nSample questions:');
-  allQuestions.slice(0, 5).forEach(q => {
-    console.log(`\nQ${q.id}: ${q.question_en}`);
-    console.log(`Type: ${q.questionType}`);
-    console.log(`Word: ${q.word}`);
-    console.log(`Options: ${q.options_en.join(', ')}`);
-    console.log(`Answer: ${q.options_en[q.correctAnswer]}`);
-    console.log(`Explanation: ${q.explanation_en}`);
-  });
-}
+// Run generator (Node.js environment only)
+// Uncomment below when running in Node.js with @types/node installed
+// if (require.main === module) {
+//   const allQuestions = generateAllVocabularyQuestions();
+//   console.log('\nSample questions:');
+//   allQuestions.slice(0, 5).forEach(q => {
+//     console.log(`\nQ${q.id}: ${q.question_en}`);
+//     console.log(`Type: ${q.questionType}`);
+//     console.log(`Word: ${q.word}`);
+//     console.log(`Options: ${q.options_en.join(', ')}`);
+//     console.log(`Answer: ${q.options_en[q.correctAnswer]}`);
+//     console.log(`Explanation: ${q.explanation_en}`);
+//   });
+// }

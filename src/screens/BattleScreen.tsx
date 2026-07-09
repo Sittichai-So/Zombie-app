@@ -39,7 +39,7 @@ const LINE = 'rgba(255,255,255,0.08)';
 const BattleScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { levelId } = route.params || {};
+  const { levelId, categoryId } = route.params || {};
 
   const {
     currentLevel,
@@ -54,6 +54,7 @@ const BattleScreen: React.FC = () => {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [questionKey, setQuestionKey] = useState(0);
+  const [battleQuestions, setBattleQuestions] = useState<Question[]>([]);
 
   const [showDamage, setShowDamage] = useState(false);
   const [damageValue, setDamageValue] = useState(0);
@@ -72,6 +73,9 @@ const BattleScreen: React.FC = () => {
   const level = currentLevel || levels.find(l => l.id === levelId);
   const playerCharacter = getCharacterById(player.selectedCharacterId);
   const enemyCharacter = level ? getCharacterById(level.enemyCharacterId) : null;
+  
+  // Use categoryId from params as fallback if level.category is not set
+  const questionCategory = level?.category || categoryId;
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
@@ -106,6 +110,12 @@ const BattleScreen: React.FC = () => {
       science: i18n.language === 'th' ? 'วิทยาศาสตร์' : 'Science',
       socialStudies: i18n.language === 'th' ? 'สังคมศึกษา' : 'Social Studies',
       english: i18n.language === 'th' ? 'ภาษาอังกฤษ' : 'English',
+      series: i18n.language === 'th' ? 'อนุกรม' : 'Series',
+      analogy: i18n.language === 'th' ? 'อุปมาอุปไมย' : 'Analogy',
+      symbolLogic: i18n.language === 'th' ? 'เงื่อนไขสัญลักษณ์' : 'Symbol Logic',
+      tablesGraph: i18n.language === 'th' ? 'ตารางและกราฟ' : 'Tables & Graphs',
+      grammar: i18n.language === 'th' ? 'ไวยากรณ์' : 'Grammar',
+      vocabulary: i18n.language === 'th' ? 'คำศัพท์' : 'Vocabulary',
     };
     return categoryNames[category] || category;
   };
@@ -118,44 +128,81 @@ const BattleScreen: React.FC = () => {
       science: GREEN,
       socialStudies: GOLD,
       english: RED,
+      series: '#FF6B6B',
+      analogy: '#4ECDC4',
+      symbolLogic: '#95E1D3',
+      tablesGraph: '#F38181',
+      grammar: '#AA96DA',
+      vocabulary: '#FCBAD3',
     };
     return categoryColors[category] || PURPLE;
   };
 
-  useEffect(() => {
-    if (level && battleState.currentQuestionIndex < level.questionCount) {
-      // Filter questions by both category and difficulty
-      let availableQuestions = quizQuestions;
-      
-      // Filter by category if level has category
-      if (level.category) {
-        availableQuestions = availableQuestions.filter(q => q.category === level.category);
-      }
-      
-      // Filter by difficulty (boss can use any difficulty)
-      availableQuestions = availableQuestions.filter(
-        q => q.difficulty === level.difficulty || level.difficulty === 'boss'
-      );
-      
-      // Fallback: if no questions match, use all questions with correct difficulty
-      if (availableQuestions.length === 0) {
-        availableQuestions = quizQuestions.filter(
-          q => q.difficulty === level.difficulty || level.difficulty === 'boss'
-        );
-      }
-      
-      const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-      const newQuestion = availableQuestions[randomIndex];
+// สุ่มคำถามล่วงหน้าแค่ครั้งเดียวตอนเริ่มด่าน
+useEffect(() => {
+  if (!level) return;
 
-      setSelectedAnswer(null);
-      setShowResult(false);
-      setIsCorrect(false);
-      setQuestionKey(prev => prev + 1);
-      setCurrentQuestion(newQuestion);
-    } else if (battleState.currentQuestionIndex >= level!.questionCount) {
-      handleEndOfLevel();
-    }
-  }, [battleState.currentQuestionIndex]);
+  let availableQuestions = [...quizQuestions];
+
+  if (questionCategory) {
+    availableQuestions = availableQuestions.filter(
+      q => q.category === questionCategory
+    );
+  }
+
+  if (level?.difficulty !== 'boss') {
+    availableQuestions = availableQuestions.filter(
+      q => q.difficulty === level?.difficulty
+    );
+  }
+
+  if (availableQuestions.length === 0) {
+    console.warn("No questions found");
+    console.warn("category =", questionCategory);
+    console.warn("difficulty =", level?.difficulty);
+
+    availableQuestions = [...quizQuestions];
+  }
+
+  if (availableQuestions.length === 0) {
+    Alert.alert("Error", "ไม่มีคำถามในระบบ");
+    return;
+  }
+
+  // สุ่มคำถามล่วงหน้าตามจำนวนที่ใช้ในด่านนี้
+  const shuffled = availableQuestions.sort(() => Math.random() - 0.5);
+  const selectedQuestions = shuffled.slice(0, level.questionCount);
+  
+  setBattleQuestions(selectedQuestions);
+  console.log(`Selected ${selectedQuestions.length} questions for battle, category:`, questionCategory);
+}, [level, questionCategory]);
+
+// แสดงคำถามตามลำดับ
+useEffect(() => {
+  if (!level) return;
+
+  if (battleState.currentQuestionIndex >= level.questionCount) {
+    handleEndOfLevel();
+    return;
+  }
+
+  if (battleQuestions.length === 0) return;
+
+  const newQuestion = battleQuestions[battleState.currentQuestionIndex];
+
+  if (!newQuestion) {
+    Alert.alert("Error", "ไม่พบคำถาม");
+    return;
+  }
+
+  console.log("Question:", newQuestion);
+
+  setCurrentQuestion(newQuestion);
+  setSelectedAnswer(null);
+  setShowResult(false);
+  setIsCorrect(false);
+  setQuestionKey(prev => prev + 1);
+}, [battleState.currentQuestionIndex, battleQuestions, level]);
 
   useEffect(() => {
     setTimeLeft(questionTimeLimit);
@@ -424,7 +471,7 @@ const BattleScreen: React.FC = () => {
       </View>
 
       <View style={styles.answersGrid}>
-        {currentQuestion && currentQuestion.options_th.map((option, index) => {
+        {currentQuestion?.options_th?.map((option, index) => {
           const isSelected = selectedAnswer === index;
           const isCorrectAnswer = showResult && index === currentQuestion.correctAnswer;
           const isWrong = showResult && isSelected && !isCorrectAnswer;

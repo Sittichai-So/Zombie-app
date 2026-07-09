@@ -10,6 +10,8 @@ import {
   Alert,
   useWindowDimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path as SvgPath, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useGame } from '../context/GameContext';
@@ -17,10 +19,6 @@ import { type Level, levels, isLevelUnlocked } from '../data/levels';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import { Mascot } from '../components';
 
-// ---- Design tokens -------------------------------------------------------
-// Signature: every card, node, and control is a flat color block cut out
-// with a bold black stroke — a "sticker" language instead of gradients
-// or soft shadows. Corners stay large and rounded; strokes stay literal ink.
 const BG = '#0A0B0D';
 const CARD_DARK = '#16181D';
 const INK = '#000000';
@@ -51,16 +49,41 @@ interface ZoneSection {
   single: boolean;
 }
 
-interface LevelNodeProps {
+interface NodePoint {
   level: Level;
-  status: LevelNodeStatus;
-  theme: ZoneTheme;
-  nodeSize: number;
-  nodeRadius: number;
-  pulseAnim: Animated.Value;
-  isFinalBoss?: boolean;
-  onPress: (levelId: number) => void;
+  cx: number;
+  cy: number;
+  size: number;
 }
+
+// ---- Color helpers ----
+// Darkens/lightens a hex color by a percentage. Used to build gradient
+// fills and pop-shadow tones out of each zone's single base color.
+const shadeColor = (hex: string, percent: number) => {
+  const clean = hex.replace('#', '');
+  const num = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
+  let r = (num >> 16) + Math.round((percent / 100) * 255);
+  let g = ((num >> 8) & 0x00ff) + Math.round((percent / 100) * 255);
+  let b = (num & 0x0000ff) + Math.round((percent / 100) * 255);
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+};
+
+// Builds a smooth vertical S-curve SVG path through a list of points —
+// this is what turns a plain list of nodes into an actual winding road.
+const buildWindingPath = (points: { x: number; y: number }[]) => {
+  if (points.length < 2) return '';
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    const p0 = points[i - 1];
+    const p1 = points[i];
+    const midY = (p0.y + p1.y) / 2;
+    d += ` C ${p0.x} ${midY}, ${p1.x} ${midY}, ${p1.x} ${p1.y}`;
+  }
+  return d;
+};
 
 const getLevelStatus = (levelId: number, completedLevels: number[]): LevelNodeStatus => {
   if (completedLevels.includes(levelId)) return 'completed';
@@ -71,11 +94,7 @@ const getLevelStatus = (levelId: number, completedLevels: number[]): LevelNodeSt
 
 // Zone day-ranges. Levels are grouped by their actual `day` value instead of
 // a fixed array index, so this keeps working correctly no matter how many
-// levels the game actually has (previously the slice boundaries assumed a
-// ~100-level roster; with fewer levels, wrong stages landed in the wrong
-// zone and — because the slice came from a reversed array — the earliest,
-// tappable stage ended up buried at the bottom of its zone instead of the
-// top, which is why nothing looked clickable).
+// levels the game actually has.
 const ZONE_DEFINITIONS = [
   { title: 'DAY 1–20 · OUTSET', theme: ZONE_THEME.outset, min: 1, max: 20 },
   { title: 'DAY 21–40 · OUTBREAK', theme: ZONE_THEME.outbreak, min: 21, max: 40 },
@@ -85,9 +104,6 @@ const ZONE_DEFINITIONS = [
 ] as const;
 
 const buildZoneSections = (allLevels: Level[]): ZoneSection[] => {
-  // Ascending by day: the earliest, easiest stage always renders first
-  // (top-left) inside its zone — that's the node the player can actually
-  // tap next, not the last one.
   const sortedLevels = [...allLevels].sort((a, b) => a.day - b.day);
 
   const finalBoss =
@@ -111,74 +127,205 @@ const buildZoneSections = (allLevels: Level[]): ZoneSection[] => {
   ];
 };
 
-const LevelNode: React.FC<LevelNodeProps> = ({
-  level,
-  status,
-  theme,
-  nodeSize,
-  nodeRadius,
-  pulseAnim,
-  isFinalBoss,
-  onPress,
-}) => {
+// Lays each level out along a gentle sine-wave "road" across the available
+// width, spaced evenly downward — the geometry behind the winding path.
+const layoutWindingNodes = (
+  levelsInZone: Level[],
+  mapWidth: number,
+  nodeSize: number,
+  verticalGap: number
+): NodePoint[] => {
+  const amplitude = Math.max(0, (mapWidth - nodeSize) / 2 - 6);
+  const center = mapWidth / 2;
+
+  return levelsInZone.map((level, i) => {
+    const cx = center + amplitude * Math.sin(i * 1.05);
+    const cy = verticalGap * i + verticalGap / 2;
+    return { level, cx, cy, size: nodeSize };
+  });
+};
+
+interface LevelNodeProps {
+  point: NodePoint;
+  status: LevelNodeStatus;
+  theme: ZoneTheme;
+  pulseAnim: Animated.Value;
+  isFinalBoss?: boolean;
+  onPress: (levelId: number) => void;
+}
+
+const LevelNode: React.FC<LevelNodeProps> = ({ point, status, theme, pulseAnim, isFinalBoss, onPress }) => {
+  const { level, cx, cy, size } = point;
   const isBoss = level.difficulty === 'boss';
   const isLocked = status === 'locked';
   const isPlayable = status === 'current' || status === 'available';
+  const radius = size / 2;
 
   return (
     <Animated.View
       style={[
         styles.levelNodeWrapper,
-        { transform: [{ scale: status === 'current' ? pulseAnim : 1 }] },
+        {
+          left: cx - size / 2 - 24,
+          top: cy - size / 2,
+          width: size + 48,
+          transform: [{ scale: status === 'current' ? pulseAnim : 1 }],
+        },
       ]}
     >
-      <TouchableOpacity
-        style={[
-          styles.levelNode,
-          {
-            width: nodeSize,
-            height: nodeSize,
-            borderRadius: nodeRadius,
-            borderColor: isLocked ? LOCKED_COLOR : INK,
-            backgroundColor: isLocked ? LOCKED_FILL : theme.color,
-          },
-          isBoss && styles.bossNode,
-          status === 'current' && styles.currentNode,
-        ]}
-        onPress={() => onPress(level.id)}
-        disabled={isLocked}
-        activeOpacity={0.8}
-      >
-        {isLocked ? (
-          <Text style={styles.lockIcon}>🔒</Text>
-        ) : (
-          <>
-            <Text style={styles.nodeEmoji}>{isBoss ? theme.icon : status === 'completed' ? '✅' : theme.icon}</Text>
-            <Text style={[styles.levelNumber, { color: theme.onColor }]}>
-              {isBoss ? 'BOSS' : level.day}
-            </Text>
-          </>
+      <View style={styles.nodeStack}>
+        {/* Comic-style pop shadow: a flat offset duplicate, not a blur */}
+        {!isLocked && (
+          <View
+            style={[
+              styles.popShadow,
+              {
+                width: size,
+                height: size,
+                borderRadius: radius,
+                backgroundColor: shadeColor(theme.color, -45),
+              },
+              isBoss && styles.bossPopShadow,
+            ]}
+          />
         )}
-      </TouchableOpacity>
 
-      {status === 'completed' && (
-        <View style={styles.completedBadge}>
-          <Text style={styles.completedBadgeText}>★</Text>
+        <TouchableOpacity
+          style={[
+            styles.levelNode,
+            {
+              width: size,
+              height: size,
+              borderRadius: radius,
+              borderColor: isLocked ? LOCKED_COLOR : INK,
+              backgroundColor: isLocked ? LOCKED_FILL : theme.color,
+            },
+            isBoss && styles.bossNode,
+            status === 'current' && styles.currentNode,
+          ]}
+          onPress={() => onPress(level.id)}
+          disabled={isLocked}
+          activeOpacity={0.85}
+        >
+          {!isLocked && (
+            <LinearGradient
+              colors={[shadeColor(theme.color, 22), theme.color, shadeColor(theme.color, -18)]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[StyleSheet.absoluteFillObject, { borderRadius: radius }]}
+            />
+          )}
+          {!isLocked && (
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 0.65 }}
+              style={[StyleSheet.absoluteFillObject, { borderRadius: radius }]}
+            />
+          )}
+
+          {isLocked ? (
+            <Text style={styles.lockIcon}>🔒</Text>
+          ) : (
+            <>
+              <Text style={styles.nodeEmoji}>{isBoss ? theme.icon : status === 'completed' ? '✅' : theme.icon}</Text>
+              <Text style={[styles.levelNumber, { color: theme.onColor }]}>
+                {isBoss ? 'BOSS' : level.day}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {status === 'completed' && (
+          <View style={styles.completedBadge}>
+            <Text style={styles.completedBadgeText}>★</Text>
+          </View>
+        )}
+
+        {isPlayable && (
+          <View style={styles.playBadge}>
+            <Text style={styles.playBadgeText}>▶</Text>
+          </View>
+        )}
+
+        <View
+          style={[
+            styles.nodeStatusBar,
+            { backgroundColor: isLocked ? '#1E2027' : CARD_DARK, borderColor: isLocked ? LOCKED_COLOR : theme.color },
+          ]}
+        >
+          <Text style={[styles.nodeStatusText, { color: isLocked ? MUTED : theme.color }]}>
+            {isBoss ? (isFinalBoss ? 'FINAL BOSS' : `BOSS · DAY ${level.day}`) : `Day ${level.day}`}
+          </Text>
         </View>
-      )}
-
-      {isPlayable && (
-        <View style={styles.playBadge}>
-          <Text style={styles.playBadgeText}>▶</Text>
-        </View>
-      )}
-
-      <View style={[styles.nodeStatusBar, { backgroundColor: isLocked ? '#1E2027' : CARD_DARK, borderColor: isLocked ? LOCKED_COLOR : theme.color }]}>
-        <Text style={[styles.nodeStatusText, { color: isLocked ? MUTED : theme.color }]}>
-          {isBoss ? (isFinalBoss ? 'FINAL BOSS' : `BOSS · DAY ${level.day}`) : `Day ${level.day}`}
-        </Text>
       </View>
     </Animated.View>
+  );
+};
+
+interface WindingZonePathProps {
+  zone: ZoneSection;
+  mapWidth: number;
+  nodeSize: number;
+  bossNodeSize: number;
+  completedLevels: number[];
+  pulseAnim: Animated.Value;
+  onPress: (levelId: number) => void;
+}
+
+const WindingZonePath: React.FC<WindingZonePathProps> = ({
+  zone,
+  mapWidth,
+  nodeSize,
+  bossNodeSize,
+  completedLevels,
+  pulseAnim,
+  onPress,
+}) => {
+  const verticalGap = nodeSize * 1.9;
+  const points = useMemo(
+    () => layoutWindingNodes(zone.slice, mapWidth, nodeSize, verticalGap),
+    [zone.slice, mapWidth, nodeSize, verticalGap]
+  );
+  const gradientId = `zoneGrad-${zone.title.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const pathD = buildWindingPath(points.map((p) => ({ x: p.cx, y: p.cy })));
+  const containerHeight = verticalGap * zone.slice.length + nodeSize * 0.6;
+  const anyUnlocked = points.some((p) => getLevelStatus(p.level.id, completedLevels) !== 'locked');
+
+  return (
+    <View style={[styles.windingNodeArea, { height: containerHeight }]}>
+      <Svg width={mapWidth} height={containerHeight} style={StyleSheet.absoluteFillObject}>
+        <Defs>
+          <SvgLinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={shadeColor(zone.theme.color, 15)} stopOpacity={anyUnlocked ? 0.9 : 0.25} />
+            <Stop offset="1" stopColor={shadeColor(zone.theme.color, -25)} stopOpacity={anyUnlocked ? 0.9 : 0.25} />
+          </SvgLinearGradient>
+        </Defs>
+        <SvgPath
+          d={pathD}
+          stroke={`url(#${gradientId})`}
+          strokeWidth={6}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+
+      {points.map((point) => {
+        const status = getLevelStatus(point.level.id, completedLevels);
+        return (
+          <LevelNode
+            key={point.level.id}
+            point={point}
+            status={status}
+            theme={zone.theme}
+            pulseAnim={pulseAnim}
+            onPress={onPress}
+          />
+        );
+      })}
+    </View>
   );
 };
 
@@ -188,16 +335,19 @@ const LevelMapScreen: React.FC = () => {
   const route = useNavigation<any>();
   const { player, startLevel } = useGame();
   const { categoryId } = route.params || {};
-  const levelNodeSize = Math.min(width * 0.2, 92);
-  const levelNodeRadius = levelNodeSize / 2;
-  const bossNodeSize = Math.min(width * 0.28, 116);
+  const levelNodeSize = Math.min(width * 0.19, 84);
+  const bossNodeSize = Math.min(width * 0.3, 124);
   const bossNodeRadius = bossNodeSize / 2;
   const [fadeAnim] = useState(new Animated.Value(0));
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  const PAGE_H_PADDING = 20;
+  const SECTION_H_PADDING = 16;
+  const mapWidth = Math.max(0, width - PAGE_H_PADDING * 2 - SECTION_H_PADDING * 2);
+
   const filteredLevels = useMemo(() => {
     if (!categoryId) return levels;
-    return levels;
+    return levels.filter(level => level.category === categoryId);
   }, [categoryId]);
 
   const zones = useMemo(() => buildZoneSections(filteredLevels), [filteredLevels]);
@@ -243,37 +393,32 @@ const LevelMapScreen: React.FC = () => {
     navigation.navigate('Battle', { levelId, categoryId });
   };
 
-  const renderConnector = (unlocked: boolean, theme: ZoneTheme) => (
-    <View style={styles.connectorTrack}>
-      <View style={[styles.connectorLine, { backgroundColor: unlocked ? theme.color : LOCKED_COLOR }]} />
-      {[0, 1, 2].map((item) => (
-        <View
-          key={item}
-          style={[
-            styles.connectorDot,
-            { backgroundColor: unlocked ? theme.color : LOCKED_COLOR },
-          ]}
-        />
-      ))}
-    </View>
-  );
-
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <View style={styles.blobTop} pointerEvents="none">
+        <LinearGradient colors={['#FF4D3D', 'transparent']} style={StyleSheet.absoluteFillObject} />
+      </View>
+      <View style={styles.blobBottom} pointerEvents="none">
+        <LinearGradient colors={['#C084FC', 'transparent']} style={StyleSheet.absoluteFillObject} />
+      </View>
+
       <View style={styles.pageWrapper}>
         <View style={styles.headerCard}>
+          <LinearGradient
+            colors={['#FF4D3D', 'rgba(255,77,61,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.headerAccentBar}
+          />
           <View style={styles.headerTop}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonWrapper}>
-              <Text style={styles.backButton}>←</Text>
-            </TouchableOpacity>
             <View style={styles.headerTitleBlock}>
               <Text style={styles.title}>
-                {categoryId ? 'ข้อสอบ ก.พ.' : 'LEVEL MAP'}
+                {categoryId ? 'ข้อสอบ ก.พ.' : 'ข้อสอบ ก.พ.'}
               </Text>
               <Text style={styles.subtitle}>
                 {categoryId
-                  ? 'เลือกหมวดหมู่ข้อสอบที่ต้องการฝึกฝน'
-                  : 'Choose your route through the apocalypse'}
+                  ? ''
+                  : 'เลือกหมวดหมู่ข้อสอบที่ต้องการฝึกฝน'}
               </Text>
             </View>
             <View style={styles.placeholder} />
@@ -284,9 +429,16 @@ const LevelMapScreen: React.FC = () => {
               <Text style={styles.statLabel}>STAGES CLEARED</Text>
               <Text style={styles.statValue}>{player.completedLevels.length}/{levels.length}</Text>
             </View>
-            <View style={[styles.statCard, styles.statCardAccent]}>
-              <Text style={[styles.statLabel, styles.statLabelAccent]}>PLAYER LEVEL</Text>
-              <Text style={styles.statValue}>{player.playerLevel}</Text>
+            <View style={styles.statCardAccentWrap}>
+              <LinearGradient
+                colors={['#FF7A5C', '#FF4D3D', shadeColor('#FF4D3D', -20)]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.statCardAccent}
+              >
+                <Text style={[styles.statLabel, styles.statLabelAccent]}>PLAYER LEVEL</Text>
+                <Text style={styles.statValue}>{player.playerLevel}</Text>
+              </LinearGradient>
             </View>
           </View>
         </View>
@@ -298,8 +450,13 @@ const LevelMapScreen: React.FC = () => {
           bounces={false}
           keyboardShouldPersistTaps="handled"
         >
-
           <View style={styles.introCard}>
+            <LinearGradient
+              colors={[GOLD, 'rgba(255,207,77,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.introAccentBar}
+            />
             <Text style={styles.introTitle}>SURVIVAL STORY</Text>
             <Text style={styles.introText}>Lead your survivors from Day 1 through the end of the apocalypse.</Text>
             <Text style={styles.introSubtext}>Unlock zones, choose your route, and take on the final boss.</Text>
@@ -313,76 +470,86 @@ const LevelMapScreen: React.FC = () => {
 
               return (
                 <View key={zone.title} style={styles.windingSection}>
-                  <View
-                    style={[
-                      styles.zoneBanner,
-                      {
-                        backgroundColor: zoneUnlocked ? zone.theme.color : LOCKED_FILL,
-                        borderColor: zoneUnlocked ? INK : LOCKED_COLOR,
-                      },
-                    ]}
-                  >
-                    <View style={styles.zoneIconBadge}>
-                      <Text style={styles.zoneIcon}>{zone.theme.icon}</Text>
-                    </View>
-                    <View style={styles.zoneTitleBlock}>
-                      <Text style={[styles.windingSectionTitle, { color: zoneUnlocked ? zone.theme.onColor : MUTED }]}>{zone.title}</Text>
-                      <Text style={[styles.zoneProgressText, { color: zoneUnlocked ? zone.theme.onColor : MUTED }]}>{clearedInZone}/{zone.slice.length} cleared</Text>
-                    </View>
-                    {isCurrentZone && (
-                      <View style={styles.startHereBadge}>
-                        <Text style={styles.startHereBadgeText}>START HERE</Text>
+                  {/* Terrain mood glow behind this zone, tinted to its theme color */}
+                  <View style={styles.zoneAmbientGlow} pointerEvents="none">
+                    <LinearGradient
+                      colors={[zoneUnlocked ? zone.theme.color : LOCKED_COLOR, 'transparent']}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  </View>
+
+                  <View style={styles.zoneBannerStack}>
+                    <View
+                      style={[
+                        styles.zoneBannerPopShadow,
+                        { backgroundColor: zoneUnlocked ? shadeColor(zone.theme.color, -45) : '#000' },
+                      ]}
+                    />
+                    <View style={[styles.zoneBanner, { borderColor: zoneUnlocked ? INK : LOCKED_COLOR }]}>
+                      {zoneUnlocked ? (
+                        <LinearGradient
+                          colors={[shadeColor(zone.theme.color, 20), zone.theme.color, shadeColor(zone.theme.color, -18)]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={StyleSheet.absoluteFillObject}
+                        />
+                      ) : (
+                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: LOCKED_FILL }]} />
+                      )}
+
+                      <View style={styles.zoneIconBadge}>
+                        <Text style={styles.zoneIcon}>{zone.theme.icon}</Text>
                       </View>
-                    )}
+                      <View style={styles.zoneTitleBlock}>
+                        <Text style={[styles.windingSectionTitle, { color: zoneUnlocked ? zone.theme.onColor : MUTED }]}>
+                          {zone.title}
+                        </Text>
+                        <Text style={[styles.zoneProgressText, { color: zoneUnlocked ? zone.theme.onColor : MUTED }]}>
+                          {clearedInZone}/{zone.slice.length} cleared
+                        </Text>
+                      </View>
+                      {isCurrentZone && (
+                        <View style={styles.startHereBadge}>
+                          <Text style={styles.startHereBadgeText}>START HERE</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
 
                   {zone.single ? (
                     <View style={styles.windingNodeContainer}>
                       {zone.slice.map((level, index) => {
                         const status = getLevelStatus(level.id, player.completedLevels);
-                        const nodeSize = level.difficulty === 'boss' ? bossNodeSize : levelNodeSize;
-                        const nodeRadius = level.difficulty === 'boss' ? bossNodeRadius : levelNodeRadius;
-
+                        const point: NodePoint = {
+                          level,
+                          cx: bossNodeSize / 2 + 24,
+                          cy: bossNodeSize / 2,
+                          size: bossNodeSize,
+                        };
                         return (
-                          <LevelNode
-                            key={`${level.id}-${index}`}
-                            level={level}
-                            status={status}
-                            theme={zone.theme}
-                            nodeSize={nodeSize}
-                            nodeRadius={nodeRadius}
-                            pulseAnim={pulseAnim}
-                            isFinalBoss
-                            onPress={handleLevelSelect}
-                          />
+                          <View key={`${level.id}-${index}`} style={{ width: bossNodeSize + 48, height: bossNodeSize + 60 }}>
+                            <LevelNode
+                              point={point}
+                              status={status}
+                              theme={zone.theme}
+                              pulseAnim={pulseAnim}
+                              isFinalBoss
+                              onPress={handleLevelSelect}
+                            />
+                          </View>
                         );
                       })}
                     </View>
                   ) : (
-                    <View style={styles.windingPath}>
-                      {zone.slice.map((level, index) => {
-                        const status = getLevelStatus(level.id, player.completedLevels);
-                        const nodeSize = level.difficulty === 'boss' ? bossNodeSize : levelNodeSize;
-                        const nodeRadius = level.difficulty === 'boss' ? bossNodeRadius : levelNodeRadius;
-
-                        return (
-                          <React.Fragment key={level.id}>
-                            <View style={[styles.windingNodeWrapper, index % 2 === 0 ? styles.left : styles.right]}>
-                              <LevelNode
-                                level={level}
-                                status={status}
-                                theme={zone.theme}
-                                nodeSize={nodeSize}
-                                nodeRadius={nodeRadius}
-                                pulseAnim={pulseAnim}
-                                onPress={handleLevelSelect}
-                              />
-                            </View>
-                            {index < zone.slice.length - 1 && renderConnector(status !== 'locked', zone.theme)}
-                          </React.Fragment>
-                        );
-                      })}
-                    </View>
+                    <WindingZonePath
+                      zone={zone}
+                      mapWidth={mapWidth}
+                      nodeSize={levelNodeSize}
+                      bossNodeSize={bossNodeSize}
+                      completedLevels={player.completedLevels}
+                      pulseAnim={pulseAnim}
+                      onPress={handleLevelSelect}
+                    />
                   )}
                 </View>
               );
@@ -401,14 +568,31 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
     width: '100%',
   },
+
+  // ---- Ambient background ----
+  blobTop: {
+    position: 'absolute',
+    top: -180,
+    left: -80,
+    width: '140%',
+    height: 340,
+    opacity: 0.14,
+    transform: [{ rotate: '-8deg' }],
+  },
+  blobBottom: {
+    position: 'absolute',
+    bottom: -220,
+    right: -100,
+    width: '140%',
+    height: 360,
+    opacity: 0.12,
+    transform: [{ rotate: '10deg' }],
+  },
+
   pageWrapper: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'web' ? 40 : 28,
-  },
-  mascotIntroSection: {
-    alignItems: 'center',
-    paddingVertical: 10,
   },
   headerCard: {
     backgroundColor: CARD_DARK,
@@ -417,6 +601,14 @@ const styles = StyleSheet.create({
     borderColor: INK,
     padding: 20,
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  headerAccentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
   },
   headerTop: {
     flexDirection: 'row',
@@ -473,8 +665,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
+  statCardAccentWrap: {
+    flex: 1,
+    borderRadius: 20,
+    borderWidth: STROKE,
+    borderColor: INK,
+    overflow: 'hidden',
+    shadowColor: '#FF4D3D',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
+  },
   statCardAccent: {
-    backgroundColor: '#FF4D3D',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   statLabel: {
     color: MUTED,
@@ -485,7 +690,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   statLabelAccent: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.85)',
   },
   statValue: {
     color: WHITE,
@@ -508,6 +713,14 @@ const styles = StyleSheet.create({
     borderColor: INK,
     padding: 18,
     marginBottom: 18,
+    overflow: 'hidden',
+  },
+  introAccentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
   },
   introTitle: {
     color: GOLD,
@@ -539,16 +752,36 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_DARK,
     borderWidth: STROKE,
     borderColor: INK,
+    overflow: 'hidden',
+  },
+  zoneAmbientGlow: {
+    position: 'absolute',
+    top: -60,
+    left: -40,
+    width: '160%',
+    height: 220,
+    opacity: 0.18,
+  },
+  zoneBannerStack: {
+    marginBottom: 14,
+  },
+  zoneBannerPopShadow: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 18,
   },
   zoneBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
     gap: 12,
     borderRadius: 18,
     borderWidth: STROKE,
     paddingVertical: 10,
     paddingHorizontal: 14,
+    overflow: 'hidden',
   },
   zoneIconBadge: {
     width: 36,
@@ -591,53 +824,35 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-  windingPath: {
-    position: 'relative',
-    paddingHorizontal: 6,
-    alignItems: 'center',
-  },
-  windingNodeWrapper: {
+  windingNodeArea: {
     width: '100%',
-  },
-  left: {
-    alignItems: 'flex-start',
-    paddingLeft: 16,
-  },
-  right: {
-    alignItems: 'flex-end',
-    paddingRight: 16,
+    position: 'relative',
   },
   windingNodeContainer: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  connectorTrack: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-  },
-  connectorLine: {
-    position: 'absolute',
-    width: 4,
-    height: '100%',
-    borderRadius: 2,
-    opacity: 0.5,
-  },
-  connectorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: INK,
-  },
   levelNodeWrapper: {
+    position: 'absolute',
     alignItems: 'center',
+  },
+  nodeStack: {
+    alignItems: 'center',
+  },
+  popShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+  },
+  bossPopShadow: {
+    top: 6,
+    left: 6,
   },
   levelNode: {
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: STROKE_THICK,
+    overflow: 'hidden',
   },
   bossNode: {
     borderWidth: STROKE_THICK + 1,

@@ -1,6 +1,7 @@
 // ข้อสอบคณิตศาสตร์
 export interface MathQuestion {
   id: number;
+  category: 'mathematics';
   question_th: string;
   question_en: string;
   options_th: string[];
@@ -15,6 +16,7 @@ export interface MathQuestion {
 export const mathQuestions: MathQuestion[] = [
   {
     id: 1,
+    category: 'mathematics',
     question_th: '2 + 3 × 4 = ?',
     question_en: '2 + 3 × 4 = ?',
     options_th: ['20', '14', '12', '10'],

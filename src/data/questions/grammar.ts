@@ -1,6 +1,7 @@
 // ข้อสอบไวยากรณ์ภาษาอังกฤษ (Grammar)
 export interface GrammarQuestion {
   id: number;
+  category: 'grammar';
   question_en: string;
   question_th: string;
   sentence: string;
@@ -15,6 +16,7 @@ export interface GrammarQuestion {
 export const grammarQuestions: GrammarQuestion[] = [
   {
     id: 1,
+    category: 'grammar',
     question_en: 'Choose the correct verb form',
     question_th: 'เลือกกริยาที่ถูกต้อง',
     sentence: 'She ___ to school every day.',

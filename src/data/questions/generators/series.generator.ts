@@ -58,14 +58,25 @@ const generateEasyQuestions = (): SeriesQuestion[] => {
         answer + diff,
         answer - diff,
         answer + 1,
-        answer - 1
+        answer - 1,
+        answer + 2,
+        answer - 2
       ].filter((v, i, a) => a.indexOf(v) === i && v > 0);
       
       const options = [answer, ...wrongAnswers.slice(0, 3)].sort(() => Math.random() - 0.5);
+      // Ensure we always have 4 options
+      while (options.length < 4) {
+        const randomOffset = Math.floor(Math.random() * 10) - 5;
+        const newOption = answer + randomOffset;
+        if (newOption > 0 && !options.includes(newOption)) {
+          options.push(newOption);
+        }
+      }
       const correctIndex = options.indexOf(answer);
       
       questions.push({
         id: questionId++,
+        category: 'series',
         question: 'จงหาตัวเลขถัดไป',
         series: [...series.map(n => n), '?'] as (number | string)[],
         options,
@@ -93,6 +104,7 @@ const generateMediumQuestions = (): SeriesQuestion[] => {
       
       questions.push({
         id: questionId++,
+        category: 'series',
         question: 'จงหาตัวเลขถัดไป',
         series: [...series.map(n => n), '?'] as (number | string)[],
         options,
@@ -112,6 +124,7 @@ const generateMediumQuestions = (): SeriesQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'series',
       question: 'จงหาตัวเลขถัดไป',
       series: [...series.map(n => n), '?'] as (number | string)[],
       options,
@@ -130,6 +143,7 @@ const generateMediumQuestions = (): SeriesQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'series',
       question: 'จงหาตัวเลขถัดไป',
       series: [...series.map(n => n), '?'] as (number | string)[],
       options,
@@ -157,6 +171,7 @@ const generateHardQuestions = (): SeriesQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'series',
       question: 'จงหาตัวเลขถัดไป',
       series: [...series.slice(0, 7), '?'],
       options,
@@ -176,6 +191,7 @@ const generateHardQuestions = (): SeriesQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'series',
       question: 'จงหาตัวเลขถัดไป',
       series: [...series, '?'],
       options,
@@ -194,6 +210,7 @@ const generateHardQuestions = (): SeriesQuestion[] => {
     
     questions.push({
       id: questionId++,
+      category: 'series',
       question: 'จงหาตัวเลขถัดไป',
       series: [...series.map(n => n), '?'] as (number | string)[],
       options,
@@ -220,15 +237,16 @@ export const generateAllSeriesQuestions = (): SeriesQuestion[] => {
   return [...easy, ...medium, ...hard];
 };
 
-// Run generator
-if (require.main === module) {
-  const allQuestions = generateAllSeriesQuestions();
-  console.log('\nSample questions:');
-  allQuestions.slice(0, 5).forEach(q => {
-    console.log(`\nQ${q.id}: ${q.question}`);
-    console.log(`Series: ${q.series.join(' ')}`);
-    console.log(`Options: ${q.options.join(', ')}`);
-    console.log(`Answer: ${q.options[q.correctAnswer]}`);
-    console.log(`Explanation: ${q.explanation}`);
-  });
-}
+// Run generator (Node.js environment only)
+// Uncomment below when running in Node.js with @types/node installed
+// if (require.main === module) {
+//   const allQuestions = generateAllSeriesQuestions();
+//   console.log('\nSample questions:');
+//   allQuestions.slice(0, 5).forEach(q => {
+//     console.log(`\nQ${q.id}: ${q.question}`);
+//     console.log(`Series: ${q.series.join(' ')}`);
+//     console.log(`Options: ${q.options.join(', ')}`);
+//     console.log(`Answer: ${q.options[q.correctAnswer]}`);
+//     console.log(`Explanation: ${q.explanation}`);
+//   });
+// }
