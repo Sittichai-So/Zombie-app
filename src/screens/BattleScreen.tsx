@@ -124,9 +124,26 @@ const BattleScreen: React.FC = () => {
 
   useEffect(() => {
     if (level && battleState.currentQuestionIndex < level.questionCount) {
-      const availableQuestions = quizQuestions.filter(
+      // Filter questions by both category and difficulty
+      let availableQuestions = quizQuestions;
+      
+      // Filter by category if level has category
+      if (level.category) {
+        availableQuestions = availableQuestions.filter(q => q.category === level.category);
+      }
+      
+      // Filter by difficulty (boss can use any difficulty)
+      availableQuestions = availableQuestions.filter(
         q => q.difficulty === level.difficulty || level.difficulty === 'boss'
       );
+      
+      // Fallback: if no questions match, use all questions with correct difficulty
+      if (availableQuestions.length === 0) {
+        availableQuestions = quizQuestions.filter(
+          q => q.difficulty === level.difficulty || level.difficulty === 'boss'
+        );
+      }
+      
       const randomIndex = Math.floor(Math.random() * availableQuestions.length);
       const newQuestion = availableQuestions[randomIndex];
 

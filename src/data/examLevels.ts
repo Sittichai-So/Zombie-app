@@ -32,7 +32,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 1,
     rewardCoins: 50,
     rewardExp: 100,
-    category: 'analytical',
+    category: 'series',
   },
   {
     id: 102,
@@ -47,7 +47,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 3,
     rewardCoins: 80,
     rewardExp: 150,
-    category: 'analytical',
+    category: 'mathematics',
   },
   {
     id: 103,
@@ -62,7 +62,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 5,
     rewardCoins: 100,
     rewardExp: 180,
-    category: 'analytical',
+    category: 'analogy',
   },
   {
     id: 104,
@@ -77,7 +77,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 8,
     rewardCoins: 150,
     rewardExp: 250,
-    category: 'analytical',
+    category: 'symbolLogic',
   },
   {
     id: 105,
@@ -92,7 +92,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 10,
     rewardCoins: 180,
     rewardExp: 300,
-    category: 'analytical',
+    category: 'tablesGraph',
   },
   {
     id: 106,
@@ -126,7 +126,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 1,
     rewardCoins: 50,
     rewardExp: 100,
-    category: 'english',
+    category: 'grammar',
   },
   {
     id: 202,
@@ -141,7 +141,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 3,
     rewardCoins: 80,
     rewardExp: 150,
-    category: 'english',
+    category: 'vocabulary',
   },
   {
     id: 203,
@@ -156,7 +156,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 5,
     rewardCoins: 100,
     rewardExp: 180,
-    category: 'english',
+    category: 'conversation',
   },
   {
     id: 204,
@@ -171,7 +171,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 8,
     rewardCoins: 150,
     rewardExp: 250,
-    category: 'english',
+    category: 'reading',
   },
   {
     id: 205,
@@ -188,25 +188,6 @@ export const examLevels: ExamLevelData[] = [
     rewardExp: 500,
     category: 'english',
   },
-
-  // ============================================
-  // กฎหมาย / คุณธรรม / การเป็นข้าราชการที่ดี
-  // ============================================
-  {
-    id: 301,
-    day: 1,
-    title: 'รัฐธรรมนูญ',
-    title_th: 'รัฐธรรมนูญ',
-    title_en: 'Constitution',
-    difficulty: 'easy',
-    enemyCharacterId: 'zombie1',
-    questionCount: 10,
-    timeLimit: 600,
-    requiredLevel: 1,
-    rewardCoins: 50,
-    rewardExp: 100,
-    category: 'ethics',
-  },
   {
     id: 302,
     day: 2,
@@ -220,7 +201,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 3,
     rewardCoins: 80,
     rewardExp: 150,
-    category: 'ethics',
+    category: 'civilService',
   },
   {
     id: 303,
@@ -250,7 +231,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 8,
     rewardCoins: 150,
     rewardExp: 250,
-    category: 'ethics',
+    category: 'discipline',
   },
   {
     id: 305,
@@ -265,7 +246,7 @@ export const examLevels: ExamLevelData[] = [
     requiredLevel: 10,
     rewardCoins: 180,
     rewardExp: 300,
-    category: 'ethics',
+    category: 'publicService',
   },
   {
     id: 306,

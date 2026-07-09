@@ -7,7 +7,17 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "jest"
+    "test": "jest",
+    "generate:series": "ts-node src/data/questions/generators/series.generator.ts",
+    "generate:mathematics": "ts-node src/data/questions/generators/mathematics.generator.ts",
+    "generate:analogy": "ts-node src/data/questions/generators/analogy.generator.ts",
+    "generate:symbolLogic": "ts-node src/data/questions/generators/symbolLogic.generator.ts",
+    "generate:tablesGraph": "ts-node src/data/questions/generators/tablesGraph.generator.ts",
+    "generate:grammar": "ts-node src/data/questions/generators/grammar.generator.ts",
+    "generate:vocabulary": "ts-node src/data/questions/generators/vocabulary.generator.ts",
+    "generate:phase1": "npm run generate:series && npm run generate:mathematics && npm run generate:analogy && npm run generate:symbolLogic && npm run generate:tablesGraph",
+    "generate:phase2": "npm run generate:grammar && npm run generate:vocabulary",
+    "generate:all": "npm run generate:phase1 && npm run generate:phase2"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
