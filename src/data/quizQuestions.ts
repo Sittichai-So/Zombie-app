@@ -12,7 +12,6 @@ export interface Question {
 }
 
 export const quizQuestions: Question[] = [
-  // วิชาความรู้ทั่วไป - General Knowledge
   {
     id: 1,
     category: 'generalKnowledge',

@@ -161,15 +161,14 @@ const HomeScreen: React.FC = () => {
             </LinearGradient>
           </View>
         </LinearGradient>
-
-      {/* Mascot Section */}
-      <View style={styles.mascotSection}>
+      
+      {/* <View style={styles.mascotSection}>
         <Mascot 
           emotion="happy" 
           size="medium"
           message="พร้อมสู้ซอมบี้หรือยัง!"
         />
-      </View>
+      </View> */}
 
       {/* Main Character Display with minimal cute zombie design */}
       <View style={styles.characterDisplay}>

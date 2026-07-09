@@ -1,59 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
   Animated,
   Dimensions,
   Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useGame } from '../context/GameContext';
 import { getCharacterById } from '../data/characters';
 import { levels } from '../data/levels';
-import Mascot from '../components/Mascot';
-import Card from '../components/Card';
-import Button from '../components/Button';
-
-const { width } = Dimensions.get('window');
 import { quizQuestions, Question } from '../data/quizQuestions';
 import i18n from '@/i18n';
+
+const { width, height } = Dimensions.get('window');
+
+const BG = '#0A0A0F';
+const PANEL = '#14151C';
+const PANEL_RAISED = '#1C1E27';
+const INK = '#000000';
+const WHITE = '#FFFFFF';
+const MUTED = '#71757F';
+const MUTED_LIGHT = '#9CA0AC';
+const GOLD = '#FFC300';
+const GREEN = '#2BE07A';
+const GREEN_DARK = '#189E56';
+const ORANGE = '#FF7A1A';
+const RED = '#FF3B5C';
+const RED_DARK = '#C4123F';
+const PURPLE = '#8A2BFF';
+const PURPLE_LIGHT = '#B266FF';
+const BLUE = '#22B8FF';
+const LINE = 'rgba(255,255,255,0.08)';
 
 const BattleScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { levelId } = route.params || {};
-  
-  const { 
-    currentLevel, 
-    battleState, 
-    answerQuestion, 
+
+  const {
+    currentLevel,
+    battleState,
+    answerQuestion,
     endBattle,
-    player 
+    player,
   } = useGame();
 
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
-  
-  // Combat animations
-  const [playerAttacking, setPlayerAttacking] = useState(false);
-  const [enemyAttacking, setEnemyAttacking] = useState(false);
+  const [questionKey, setQuestionKey] = useState(0);
+
   const [showDamage, setShowDamage] = useState(false);
   const [damageValue, setDamageValue] = useState(0);
   const [comboCount, setComboCount] = useState(0);
   const [showCombo, setShowCombo] = useState(false);
-  
-  // Animation values
+
+  const questionTimeLimit = useRef(battleState.timeRemaining || 15).current;
+  const [timeLeft, setTimeLeft] = useState(questionTimeLimit);
+
   const playerScale = useState(new Animated.Value(1))[0];
   const enemyScale = useState(new Animated.Value(1))[0];
   const shakeAnim = useState(new Animated.Value(0))[0];
   const comboScale = useState(new Animated.Value(0))[0];
+  const resultOpacity = useState(new Animated.Value(0))[0];
 
   const level = currentLevel || levels.find(l => l.id === levelId);
   const playerCharacter = getCharacterById(player.selectedCharacterId);
@@ -61,64 +75,121 @@ const BattleScreen: React.FC = () => {
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'legendary': return '#f39c12';
-      case 'epic': return '#9b59b6';
-      case 'rare': return '#3498db';
-      case 'common': return '#95a5a6';
-      default: return '#95a5a6';
+      case 'legendary': return GOLD;
+      case 'epic': return PURPLE;
+      case 'rare': return BLUE;
+      case 'common': return MUTED;
+      default: return MUTED;
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'zombie': return '🧟';
-      case 'human': return '👤';
+      case 'human': return '🧑';
       case 'special': return '⭐';
       default: return '❓';
     }
   };
 
+  const getHealthColor = (percent: number) => {
+    if (percent > 0.6) return GREEN;
+    if (percent > 0.3) return ORANGE;
+    return RED;
+  };
+
+  const getCategoryName = (category: string) => {
+    const categoryNames: Record<string, string> = {
+      generalKnowledge: i18n.language === 'th' ? 'ความรู้ทั่วไป' : 'General Knowledge',
+      thaiLanguage: i18n.language === 'th' ? 'ภาษาไทย' : 'Thai Language',
+      mathematics: i18n.language === 'th' ? 'คณิตศาสตร์' : 'Mathematics',
+      science: i18n.language === 'th' ? 'วิทยาศาสตร์' : 'Science',
+      socialStudies: i18n.language === 'th' ? 'สังคมศึกษา' : 'Social Studies',
+      english: i18n.language === 'th' ? 'ภาษาอังกฤษ' : 'English',
+    };
+    return categoryNames[category] || category;
+  };
+
+  const getCategoryColor = (category: string) => {
+    const categoryColors: Record<string, string> = {
+      generalKnowledge: BLUE,
+      thaiLanguage: PURPLE,
+      mathematics: ORANGE,
+      science: GREEN,
+      socialStudies: GOLD,
+      english: RED,
+    };
+    return categoryColors[category] || PURPLE;
+  };
+
   useEffect(() => {
     if (level && battleState.currentQuestionIndex < level.questionCount) {
-      // Get random question based on level difficulty
       const availableQuestions = quizQuestions.filter(
         q => q.difficulty === level.difficulty || level.difficulty === 'boss'
       );
       const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-      setCurrentQuestion(availableQuestions[randomIndex]);
+      const newQuestion = availableQuestions[randomIndex];
+
+      setSelectedAnswer(null);
+      setShowResult(false);
+      setIsCorrect(false);
+      setQuestionKey(prev => prev + 1);
+      setCurrentQuestion(newQuestion);
     } else if (battleState.currentQuestionIndex >= level!.questionCount) {
-      // End of level
       handleEndOfLevel();
     }
   }, [battleState.currentQuestionIndex]);
 
-  // Timer countdown
   useEffect(() => {
-    if (battleState.timeRemaining <= 0) {
+    setTimeLeft(questionTimeLimit);
+  }, [questionKey]);
+
+  useEffect(() => {
+    if (showResult) return;
+    if (timeLeft <= 0) {
       handleTimeUp();
       return;
     }
-
-    const timer = setInterval(() => {
-      // Update battle state time - this would need to be in GameContext
-      // For now, we'll just track locally
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [battleState.timeRemaining]);
+    const timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [timeLeft, showResult, questionKey]);
 
   const handleEndOfLevel = () => {
-    const victory = battleState.enemyHealth <= 0;
-    endBattle(victory);
-    
+    const enemyDefeated = battleState.enemyHealth <= 0;
+    const questionCount = level!.questionCount;
+    const correctRatio = questionCount > 0 ? battleState.correctAnswers / questionCount : 0;
+    const passedByScore = correctRatio > 0.5;
+
+    const resultType: 'victory' | 'partial' | 'defeat' = enemyDefeated
+      ? 'victory'
+      : passedByScore
+      ? 'partial'
+      : 'defeat';
+
+    const rewardMultiplier = resultType === 'partial' ? 0.5 : 1;
+    endBattle(resultType !== 'defeat', rewardMultiplier);
+
+    const earnedCoins = Math.round(level!.rewardCoins * rewardMultiplier);
+    const earnedExp = Math.round(level!.rewardExp * rewardMultiplier);
+
+    const titles: Record<typeof resultType, string> = {
+      victory: 'ชนะ!',
+      partial: 'ผ่านแบบพอตัว',
+      defeat: 'พ่ายแพ้',
+    };
+
+    const messages: Record<typeof resultType, string> = {
+      victory: `เหรียญ ${earnedCoins} ประสบการณ์ ${earnedExp}!`,
+      partial: `ตอบถูก ${battleState.correctAnswers}/${questionCount} ข้อ ได้รางวัลครึ่งหนึ่ง: เหรียญ ${earnedCoins} ประสบการณ์ ${earnedExp}`,
+      defeat: 'ลองใหม่อีกครั้ง',
+    };
+
     Alert.alert(
-      victory ? 'ชัยชนะ!' : 'พ่ายแพ้',
-      victory 
-        ? `เหรียญ ${level!.rewardCoins} ประสบการณ์ ${level!.rewardExp}!`
-        : 'ลองใหม่อีกครั้ง',
+      titles[resultType],
+      messages[resultType],
       [
         {
-          text: victory ? 'เล่นต่อ' : 'ลองใหม่',
+          text: resultType === 'defeat' ? 'ลองใหม่' : 'เล่นต่อ',
           onPress: () => navigation.navigate('LevelMap'),
         },
       ]
@@ -126,125 +197,92 @@ const BattleScreen: React.FC = () => {
   };
 
   const handleTimeUp = () => {
-    // Time's up, treat as wrong answer
     handleAnswer(-1);
+  };
+
+  const handleCancelPress = () => {
+    Alert.alert(
+      'ยกเลิกการต่อสู้?',
+      'ความคืบหน้าในด่านนี้จะไม่ถูกบันทึก',
+      [
+        { text: 'เล่นต่อ', style: 'cancel' },
+        {
+          text: 'ยกเลิก',
+          style: 'destructive',
+          onPress: () => {
+            endBattle(false);
+            navigation.navigate('LevelMap');
+          },
+        },
+      ]
+    );
   };
 
   const handleAnswer = (answerIndex: number) => {
     if (!currentQuestion || showResult) return;
 
-    setSelectedAnswer(answerIndex);
     const correct = answerIndex === currentQuestion.correctAnswer;
+
+    setSelectedAnswer(answerIndex);
     setIsCorrect(correct);
     setShowResult(true);
 
+    resultOpacity.setValue(0);
+    Animated.timing(resultOpacity, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+
     if (correct) {
-      // Calculate damage with combo bonus
-      const baseDamage = playerCharacter?.baseStats.attack ? playerCharacter.baseStats.attack * (1 + comboCount * 0.1) : 10;
+      const baseDamage = playerCharacter?.baseStats.attack
+        ? playerCharacter.baseStats.attack * (1 + comboCount * 0.1)
+        : 10;
       const damage = Math.floor(baseDamage * (1 + Math.random() * 0.2));
-      
+
       setDamageValue(damage);
       setShowDamage(true);
       setComboCount(prev => prev + 1);
-      
-      // Show combo animation
+
       if (comboCount > 1) {
         setShowCombo(true);
         Animated.sequence([
-          Animated.timing(comboScale, {
-            toValue: 1.5,
-            duration: 200,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
-          Animated.timing(comboScale, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
+          Animated.timing(comboScale, { toValue: 1.4, duration: 180, useNativeDriver: Platform.OS !== 'web' }),
+          Animated.timing(comboScale, { toValue: 1, duration: 180, useNativeDriver: Platform.OS !== 'web' }),
         ]).start(() => setShowCombo(false));
       }
-      
-      // Player attack animation
-      setPlayerAttacking(true);
+
       Animated.sequence([
-        Animated.timing(playerScale, {
-          toValue: 1.3,
-          duration: 150,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.timing(playerScale, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
+        Animated.timing(playerScale, { toValue: 1.25, duration: 140, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(playerScale, { toValue: 1, duration: 140, useNativeDriver: Platform.OS !== 'web' }),
       ]).start(() => {
-        setPlayerAttacking(false);
-        
-        // Enemy shake animation (taking damage)
         Animated.sequence([
-          Animated.timing(enemyScale, {
-            toValue: 0.8,
-            duration: 100,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
-          Animated.timing(enemyScale, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
+          Animated.timing(enemyScale, { toValue: 0.85, duration: 100, useNativeDriver: Platform.OS !== 'web' }),
+          Animated.timing(enemyScale, { toValue: 1, duration: 100, useNativeDriver: Platform.OS !== 'web' }),
         ]).start();
-        
-        setTimeout(() => setShowDamage(false), 1000);
+        setTimeout(() => setShowDamage(false), 900);
       });
     } else {
-      // Wrong answer - enemy attacks
-      setComboCount(0); // Reset combo
-      setEnemyAttacking(true);
-      
-      // Enemy attack animation
+      setComboCount(0);
+
       Animated.sequence([
-        Animated.timing(enemyScale, {
-          toValue: 1.2,
-          duration: 150,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.timing(enemyScale, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
+        Animated.timing(enemyScale, { toValue: 1.15, duration: 140, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(enemyScale, { toValue: 1, duration: 140, useNativeDriver: Platform.OS !== 'web' }),
       ]).start(() => {
-        setEnemyAttacking(false);
-        
-        // Player shake animation (taking damage)
         Animated.sequence([
-          Animated.timing(shakeAnim, {
-            toValue: 10,
-            duration: 100,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: -10,
-            duration: 100,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 0,
-            duration: 100,
-            useNativeDriver: Platform.OS !== 'web',
-          }),
+          Animated.timing(shakeAnim, { toValue: 8, duration: 90, useNativeDriver: Platform.OS !== 'web' }),
+          Animated.timing(shakeAnim, { toValue: -8, duration: 90, useNativeDriver: Platform.OS !== 'web' }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 90, useNativeDriver: Platform.OS !== 'web' }),
         ]).start();
       });
     }
 
-    // Update battle state
     answerQuestion(correct);
 
-    // Show result for 2 seconds then move to next question
     setTimeout(() => {
       setShowResult(false);
       setSelectedAnswer(null);
-    }, 2000);
+    }, 1500);
   };
 
   if (!level || !playerCharacter || !enemyCharacter) {
@@ -259,342 +297,166 @@ const BattleScreen: React.FC = () => {
   const playerMaxHealth = playerCharacter.baseStats.health * (1 + playerCharLevel * 0.1);
   const playerHealthPercent = battleState.playerHealth / playerMaxHealth;
   const enemyHealthPercent = battleState.enemyHealth / enemyCharacter.baseStats.health;
+  const wrongCount = battleState.correctAnswers === 0
+    ? level.questionCount
+    : level.questionCount - battleState.correctAnswers;
 
   return (
     <View style={styles.container}>
-      {/* Combo Display */}
       {showCombo && comboCount > 1 && (
-        <Animated.View style={[
-          styles.comboDisplay,
-          { transform: [{ scale: comboScale }] }
-        ]}>
-          <Text style={styles.comboText}>🔥 {comboCount}x COMBO!</Text>
+        <Animated.View style={[styles.comboDisplay, { transform: [{ scale: comboScale }] }]}>
+          <View style={styles.comboBadge}>
+            <Text style={styles.comboText}>{comboCount}X COMBO</Text>
+          </View>
         </Animated.View>
       )}
 
-      {/* Damage Display */}
       {showDamage && (
         <View style={styles.damageDisplay}>
           <Text style={styles.damageNumber}>-{damageValue}</Text>
         </View>
       )}
 
-      {/* Gradient Battle Header */}
-      <LinearGradient
-        colors={['rgba(233, 69, 96, 0.2)', 'rgba(22, 33, 62, 0.95)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.battleHeader}
-      >
-        <View style={styles.headerLeft}>
-          <Card variant="danger" size="small">
-            <View style={styles.timerBox}>
-              <Text style={styles.timerIcon}>⏱️</Text>
-              <Text style={[styles.timerText, { color: battleState.timeRemaining < 10 ? '#ff4757' : '#2ed573' }]}>
-                {battleState.timeRemaining}s
-              </Text>
-            </View>
-          </Card>
-        </View>
-        <View style={styles.headerCenter}>
-          <View style={styles.questionCounter}>
-            <Text style={styles.questionLabel}>WAVE</Text>
-            <Text style={styles.questionNumber}>
-              {battleState.currentQuestionIndex + 1}<Text style={styles.questionTotal}>/{level.questionCount}</Text>
+      {showResult && (
+        <Animated.View style={[styles.resultOverlay, { opacity: resultOpacity }]}>
+          <View style={[styles.resultCard, { backgroundColor: isCorrect ? GREEN : RED }]}>
+            <Text style={styles.resultTitle}>{isCorrect ? 'CORRECT' : 'WRONG'}</Text>
+          </View>
+        </Animated.View>
+      )}
+
+      <View style={styles.header}>
+        <View style={styles.headerLeftGroup}>
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancelPress} activeOpacity={0.8}>
+            <Text style={styles.cancelIcon}>✕</Text>
+          </TouchableOpacity>
+          <View style={[styles.chip, timeLeft < 10 && styles.chipDanger]}>
+            <Text style={[styles.chipValue, { color: timeLeft < 10 ? WHITE : GREEN }]}>
+              {timeLeft}s
             </Text>
           </View>
         </View>
-        <View style={styles.headerRight}>
-          <Card variant="danger" size="small">
-            <View style={styles.damageIndicator}>
-              <Text style={styles.damageIcon}>💀</Text>
-              <Text style={styles.damageText}>{playerCharacter.baseStats.attack}</Text>
-            </View>
-          </Card>
-        </View>
-      </LinearGradient>
 
-      {/* Battle Arena with Mascot */}
-      <ScrollView 
-        style={[styles.arenaScroll, Platform.OS === 'web' && { minHeight: '100%' }]} 
-        showsVerticalScrollIndicator={true}
-        contentContainerStyle={[styles.arenaScrollContent, { flexGrow: 1 }, Platform.OS === 'web' && { minHeight: '100%' }, Platform.OS === 'web' && { paddingBottom: 100 }]}
-        nestedScrollEnabled={Platform.OS !== 'web'}
-        bounces={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Mascot Battle Guidance */}
-        <View style={styles.mascotBattleSection}>
-          <Mascot 
-            emotion={showCombo && comboCount > 2 ? "excited" : showDamage ? "happy" : battleState.playerHealth < playerMaxHealth * 0.3 ? "worried" : "thinking"}
-            size="medium"
-            message={showCombo && comboCount > 2 ? `🔥 ${comboCount}x COMBO!` : showDamage ? "โจมตี!" : battleState.playerHealth < playerMaxHealth * 0.3 ? "ระวัง!" : "สู้ๆ!"}
-          />
+        <View style={styles.waveBadge}>
+          <Text style={styles.waveLabel}>WAVE</Text>
+          <Text style={styles.waveNumber}>
+            {Math.min(battleState.currentQuestionIndex + 1, level.questionCount)}
+            <Text style={styles.waveTotal}>/{level.questionCount}</Text>
+          </Text>
         </View>
 
-        <LinearGradient
-          colors={['rgba(45, 27, 78, 0.9)', 'rgba(26, 26, 46, 0.85)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.arena}
-        >
-          {/* Player Side - Left */}
-          <View style={styles.fighterLeft}>
-            <View style={styles.playerInfo}>
-              <Text style={styles.fighterNamePlayer}>
-                {i18n.language === 'th' ? playerCharacter.name_th : playerCharacter.name_en}
+        <View style={styles.chip}>
+          <Text style={[styles.chipValue, { color: ORANGE }]}>{playerCharacter.baseStats.attack} ATK</Text>
+        </View>
+      </View>
+
+      <View style={styles.arena}>
+        <View style={styles.fighter}>
+          <Text style={styles.nameLeft} numberOfLines={1}>
+            {i18n.language === 'th' ? playerCharacter.name_th : playerCharacter.name_en}
+          </Text>
+          <Text style={styles.levelTag}>LV.{playerCharLevel}</Text>
+
+          <Animated.View style={[styles.avatarFrame, { borderColor: PURPLE, transform: [{ scale: playerScale }] }]}>
+            <Text style={styles.avatarEmoji}>{getTypeIcon(playerCharacter.type)}</Text>
+          </Animated.View>
+
+          <View style={styles.healthBg}>
+            <View style={[styles.healthFill, { width: `${Math.max(0, playerHealthPercent * 100)}%`, backgroundColor: getHealthColor(playerHealthPercent) }]} />
+          </View>
+          <Text style={styles.healthLabel}>{Math.floor(battleState.playerHealth)}/{Math.floor(playerMaxHealth)}</Text>
+        </View>
+
+        <View style={styles.vsCircle}>
+          <Text style={styles.vsText}>VS</Text>
+        </View>
+
+        <Animated.View style={[styles.fighter, { transform: [{ translateX: shakeAnim }] }]}>
+          <Text style={styles.nameRight} numberOfLines={1}>
+            {i18n.language === 'th' ? enemyCharacter.name_th : enemyCharacter.name_en}
+          </Text>
+          <Text style={[styles.levelTag, { color: getRarityColor(enemyCharacter.rarity) }]}>
+            {enemyCharacter.rarity.toUpperCase()}
+          </Text>
+
+          <Animated.View style={[styles.avatarFrame, { borderColor: RED, transform: [{ scale: enemyScale }] }]}>
+            <Text style={styles.avatarEmoji}>{getTypeIcon(enemyCharacter.type)}</Text>
+          </Animated.View>
+
+          <View style={styles.healthBg}>
+            <View style={[styles.healthFill, { width: `${Math.max(0, enemyHealthPercent * 100)}%`, backgroundColor: getHealthColor(enemyHealthPercent) }]} />
+          </View>
+          <Text style={styles.healthLabel}>{battleState.enemyHealth}/{enemyCharacter.baseStats.health}</Text>
+        </Animated.View>
+      </View>
+
+      <View style={styles.questionCard}>
+        <View style={styles.questionTopRow}>
+          <View style={[styles.categoryPill, { backgroundColor: currentQuestion ? getCategoryColor(currentQuestion.category) : PURPLE }]}>
+            <Text style={styles.categoryPillText}>
+              {currentQuestion ? getCategoryName(currentQuestion.category) : ''}
+            </Text>
+          </View>
+          <Text style={styles.difficultyText}>
+            {currentQuestion?.difficulty === 'hard' ? 'HARD' : currentQuestion?.difficulty === 'medium' ? 'MEDIUM' : 'EASY'}
+          </Text>
+        </View>
+        <Text style={styles.questionText} numberOfLines={3}>
+          {currentQuestion && (i18n.language === 'th' ? currentQuestion.question_th : currentQuestion.question_en)}
+        </Text>
+      </View>
+
+      <View style={styles.answersGrid}>
+        {currentQuestion && currentQuestion.options_th.map((option, index) => {
+          const isSelected = selectedAnswer === index;
+          const isCorrectAnswer = showResult && index === currentQuestion.correctAnswer;
+          const isWrong = showResult && isSelected && !isCorrectAnswer;
+
+          let bg = PANEL_RAISED;
+          let letterBg = '#262834';
+          if (showResult && isCorrectAnswer) { bg = GREEN; letterBg = GREEN_DARK; }
+          else if (showResult && isWrong) { bg = RED; letterBg = RED_DARK; }
+          else if (isSelected) { bg = PURPLE; letterBg = PURPLE_LIGHT; }
+
+          return (
+            <TouchableOpacity
+              key={`${questionKey}-answer-${index}`}
+              style={[
+                styles.answerButton,
+                {
+                  backgroundColor: bg,
+                  borderColor: isCorrectAnswer ? GREEN : isWrong ? RED : isSelected ? PURPLE : LINE,
+                },
+              ]}
+              onPress={() => handleAnswer(index)}
+              disabled={showResult}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.answerLetter, { backgroundColor: letterBg }]}>
+                <Text style={styles.letterText}>{String.fromCharCode(65 + index)}</Text>
+              </View>
+              <Text
+                style={[styles.answerText, (isCorrectAnswer || isWrong || isSelected) && styles.answerTextOnFill]}
+                numberOfLines={3}
+              >
+                {i18n.language === 'th' ? currentQuestion.options_th[index] : currentQuestion.options_en[index]}
               </Text>
-              <Text style={styles.fighterLevel}>Lv.{playerCharLevel}</Text>
-            </View>
-            
-            {/* Gradient Health Bar */}
-            <View style={styles.healthBarWrapper}>
-              <View style={styles.healthBarBg}>
-                <LinearGradient
-                  colors={
-                    playerHealthPercent > 0.6 
-                      ? ['#2ed573', '#7bed9f'] 
-                      : playerHealthPercent > 0.3 
-                      ? ['#ffa502', '#ff7f50'] 
-                      : ['#ff4757', '#ff6b81']
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[
-                    styles.healthBarFill,
-                    { 
-                      width: `${Math.max(0, playerHealthPercent * 100)}%`,
-                    }
-                  ]}
-                />
-              </View>
-              <View style={styles.healthStats}>
-                <Text style={styles.healthDroplet}>🩸</Text>
-                <Text style={styles.healthValue}>{Math.floor(battleState.playerHealth)}</Text>
-                <Text style={styles.healthMax}>/{Math.floor(playerMaxHealth)}</Text>
-              </View>
-            </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
-            {/* Character Display */}
-            <View style={[styles.characterFrame, styles.playerFrame]}>
-              <View style={[styles.characterGlow, { backgroundColor: getRarityColor(playerCharacter.rarity) + '40' }]}>
-                <Text style={styles.characterEmoji}>{getTypeIcon(playerCharacter.type)}</Text>
-              </View>
-              <View style={styles.rarityIndicator}>
-                <Text style={styles.rarityDots}>
-                  {playerCharacter.rarity === 'legendary' ? '👑💜💙💚' :
-                   playerCharacter.rarity === 'epic' ? '💜💙💚' :
-                   playerCharacter.rarity === 'rare' ? '💙💚' : '💚'}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* VS Badge */}
-          <View style={styles.vsBadge}>
-            <View style={styles.vsCircle}>
-              <Text style={styles.vsText}>VS</Text>
-            </View>
-            <Text style={styles.vsIcon}>⚔️</Text>
-          </View>
-
-          {/* Enemy Side - Right */}
-          <View style={styles.fighterRight}>
-            <View style={styles.enemyInfo}>
-              <Text style={styles.fighterNameEnemy}>
-                {i18n.language === 'th' ? enemyCharacter.name_th : enemyCharacter.name_en}
-              </Text>
-              <Text style={styles.enemyRarity}>
-                {enemyCharacter.rarity.toUpperCase()}
-              </Text>
-            </View>
-            
-            {/* Enemy Gradient Health Bar */}
-            <View style={styles.healthBarWrapper}>
-              <View style={styles.healthBarBg}>
-                <LinearGradient
-                  colors={
-                    enemyHealthPercent > 0.6 
-                      ? ['#2ed573', '#7bed9f'] 
-                      : enemyHealthPercent > 0.3 
-                      ? ['#ffa502', '#ff7f50'] 
-                      : ['#ff4757', '#ff6b81']
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[
-                    styles.healthBarFill,
-                    { 
-                      width: `${Math.max(0, enemyHealthPercent * 100)}%`,
-                    }
-                  ]}
-                />
-              </View>
-              <View style={styles.healthStats}>
-                <Text style={styles.healthDroplet}>🩸</Text>
-                <Text style={styles.healthValue}>{battleState.enemyHealth}</Text>
-                <Text style={styles.healthMax}>/{enemyCharacter.baseStats.health}</Text>
-              </View>
-            </View>
-
-            {/* Enemy Character Display */}
-            <View style={[styles.characterFrame, styles.enemyFrame]}>
-              <View style={[styles.characterGlow, { backgroundColor: getRarityColor(enemyCharacter.rarity) + '40' }]}>
-                <Text style={styles.characterEmoji}>{getTypeIcon(enemyCharacter.type)}</Text>
-              </View>
-              <View style={styles.enemyHealthStatus}>
-                {enemyHealthPercent <= 0.3 && <Text style={styles.criticalText}>⚠️ CRITICAL</Text>}
-              </View>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* Gradient Question Zone */}
-        <View style={styles.questionZone}>
-          <Card variant="primary">
-            <View style={styles.questionPanel}>
-              <View style={styles.questionHeader}>
-                <LinearGradient
-                  colors={
-                    currentQuestion && currentQuestion.difficulty === 'hard' 
-                      ? ['#ff6b35', '#ff8c42'] 
-                      : currentQuestion && currentQuestion.difficulty === 'medium'
-                      ? ['#ffa502', '#ffc048']
-                      : ['#2ed573', '#7bed9f']
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.categoryBadge}
-                >
-                  <Text style={styles.categoryText}>{currentQuestion && currentQuestion.category}</Text>
-                </LinearGradient>
-                <Text style={styles.difficultyLabel}>
-                  {currentQuestion && currentQuestion.difficulty === 'hard' ? '🔥 HARD' :
-                   currentQuestion && currentQuestion.difficulty === 'medium' ? '⚡ MEDIUM' : '📚 EASY'}
-                </Text>
-              </View>
-              
-              <View style={styles.questionContent}>
-                <Text style={styles.questionMark}>❓</Text>
-                <Text style={styles.questionTextMain}>
-                  {currentQuestion && (i18n.language === 'th' ? currentQuestion.question_th : currentQuestion.question_en)}
-                </Text>
-              </View>
-            </View>
-          </Card>
-
-          {/* Gradient Answer Buttons */}
-          <View style={styles.answersGrid}>
-            {currentQuestion && currentQuestion.options_th.map((option, index) => {
-              const isSelected = selectedAnswer === index;
-              const isCorrect = showResult && index === currentQuestion.correctAnswer;
-              const isWrong = showResult && isSelected && index !== currentQuestion.correctAnswer;
-              
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.answerButton,
-                    isSelected && styles.answerSelected,
-                    isCorrect && styles.answerCorrect,
-                    isWrong && styles.answerWrong,
-                  ]}
-                  onPress={() => handleAnswer(index)}
-                  disabled={showResult}
-                  activeOpacity={0.7}
-                >
-                  <LinearGradient
-                    colors={
-                      isCorrect
-                        ? ['#2ed573', '#7bed9f']
-                        : isWrong
-                        ? ['#ff4757', '#ff6b81']
-                        : isSelected
-                        ? ['#a55eea', '#8854d0']
-                        : ['rgba(22, 33, 62, 0.9)', 'rgba(15, 52, 96, 0.8)']
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.answerGradient}
-                  >
-                    <View style={styles.answerContent}>
-                      <View style={[
-                        styles.answerLetter,
-                        isSelected && styles.answerLetterSelected,
-                        isCorrect && styles.answerLetterCorrect,
-                        isWrong && styles.answerLetterWrong,
-                      ]}>
-                        <Text style={styles.letterText}>
-                          {String.fromCharCode(65 + index)}
-                        </Text>
-                      </View>
-                      <Text style={[
-                        styles.answerText,
-                        isCorrect && styles.answerTextCorrect,
-                      ]} numberOfLines={3}>
-                        {i18n.language === 'th' 
-                          ? currentQuestion && currentQuestion.options_th[index] 
-                          : currentQuestion && currentQuestion.options_en[index]
-                        }
-                      </Text>
-                    </View>
-                    {isCorrect && <Text style={styles.correctIcon}>✅</Text>}
-                    {isWrong && <Text style={styles.wrongIcon}>❌</Text>}
-                  </LinearGradient>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Result Popup */}
-          {showResult && (
-            <Animated.View style={styles.resultPopupContainer}>
-              <Card variant={isCorrect ? 'success' : 'danger'}>
-                <View style={styles.resultContent}>
-                  <Text style={styles.resultEmoji}>{isCorrect ? '🎯' : '💥'}</Text>
-                  <Text style={[
-                    styles.resultTitle,
-                    { color: isCorrect ? '#2ed573' : '#ff4757' }
-                  ]}>
-                    {isCorrect ? 'CORRECT!' : 'WRONG!'}
-                  </Text>
-                  <Text style={styles.resultSubtitle}>
-                    {isCorrect ? '+Damage to Enemy' : '-Damage Taken'}
-                  </Text>
-                </View>
-              </Card>
-            </Animated.View>
-          )}
+      <View style={styles.footer}>
+        <View style={styles.footerItem}>
+          <Text style={styles.footerLabel}>CORRECT</Text>
+          <Text style={[styles.footerValue, { color: GREEN }]}>{battleState.correctAnswers}</Text>
         </View>
-      </ScrollView>
-
-      {/* Gradient Battle Footer */}
-      <LinearGradient
-        colors={['rgba(22, 33, 62, 0.95)', 'rgba(15, 52, 96, 0.9)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.battleFooter}
-      >
-        <View style={styles.footerStats}>
-          <View style={styles.statItem}>
-            <Text style={styles.statIconLarge}>✅</Text>
-            <Text style={styles.statLabel}>CORRECT</Text>
-            <Text style={[styles.statValue, { color: '#2ed573' }]}>{battleState.correctAnswers}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statIconLarge}>❌</Text>
-            <Text style={styles.statLabel}>WRONG</Text>
-            <Text style={[styles.statValue, { color: '#ff4757' }]}>{level ? (battleState.correctAnswers === 0 ? level.questionCount : level.questionCount - battleState.correctAnswers) : 0}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statIconLarge}>⚡</Text>
-            <Text style={styles.statLabel}>POWER</Text>
-            <Text style={[styles.statValue, { color: '#ffa502' }]}>{playerCharacter ? playerCharacter.baseStats.attack : 0}</Text>
-          </View>
+        <View style={styles.footerDivider} />
+        <View style={styles.footerItem}>
+          <Text style={styles.footerLabel}>WRONG</Text>
+          <Text style={[styles.footerValue, { color: RED }]}>{wrongCount}</Text>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 };
@@ -602,511 +464,318 @@ const BattleScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: BG,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   loadingText: {
-    color: '#ffffff',
+    color: WHITE,
     fontSize: 18,
     textAlign: 'center',
     marginTop: 50,
   },
-  // Combo Display
   comboDisplay: {
     position: 'absolute',
-    top: 100,
+    top: height * 0.32,
     left: 0,
     right: 0,
     alignItems: 'center',
     zIndex: 100,
   },
-  comboText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ff6b6b',
-    textShadowColor: '#e94560',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+  comboBadge: {
+    backgroundColor: RED,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
-  // Damage Display
+  comboText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: WHITE,
+    letterSpacing: 1.5,
+  },
   damageDisplay: {
     position: 'absolute',
-    top: '40%',
+    top: height * 0.28,
     left: 0,
     right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
     zIndex: 99,
   },
   damageNumber: {
     fontSize: 48,
-    fontWeight: 'bold',
-    color: '#ff0000',
-    textShadowColor: '#ffffff',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 15,
+    fontWeight: '900',
+    color: RED,
   },
-  // Gradient Header
-  battleHeader: {
+  resultOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
+  },
+  resultCard: {
+    borderRadius: 24,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+  },
+  resultTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: INK,
+    letterSpacing: 3,
+  },
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingTop: 50,
-    paddingBottom: 15,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: '#a55eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
-  headerLeft: {
-    flex: 1,
-  },
-  headerCenter: {
-    flex: 2,
-    alignItems: 'center',
-  },
-  headerRight: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  timerBox: {
+  headerLeftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    gap: 8,
+  },
+  cancelButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: PANEL_RAISED,
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelIcon: {
+    color: MUTED_LIGHT,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  chip: {
+    backgroundColor: PANEL_RAISED,
+    borderRadius: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-  },
-  timerIcon: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-  timerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#e94560',
-  },
-  questionCounter: {
+    minWidth: 64,
     alignItems: 'center',
   },
-  questionLabel: {
+  chipDanger: {
+    backgroundColor: RED,
+  },
+  chipValue: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  waveBadge: {
+    alignItems: 'center',
+    backgroundColor: PANEL_RAISED,
+    borderRadius: 16,
+    paddingHorizontal: 22,
+    paddingVertical: 6,
+  },
+  waveLabel: {
     fontSize: 10,
-    color: '#888888',
+    color: PURPLE_LIGHT,
+    fontWeight: '900',
     letterSpacing: 2,
   },
-  questionNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
+  waveNumber: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: WHITE,
   },
-  questionTotal: {
-    fontSize: 16,
-    color: '#a0a0a0',
-  },
-  damageIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  damageIcon: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-  damageText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#e94560',
-  },
-  // Battle Arena
-  arenaScroll: {
-    flex: 1,
-    width: '100%',
-  },
-  arenaScrollContent: {
-    paddingBottom: 100,
-  },
-  mascotBattleSection: {
-    padding: 15,
-    alignItems: 'center',
+  waveTotal: {
+    fontSize: 14,
+    color: MUTED_LIGHT,
   },
   arena: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: 20,
-    minHeight: 280,
-    borderRadius: 20,
+    backgroundColor: PANEL,
+    marginHorizontal: 16,
+    borderRadius: 24,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    borderColor: LINE,
   },
-  fighterLeft: {
+  fighter: {
     flex: 1,
     alignItems: 'center',
   },
-  fighterRight: {
-    flex: 1,
-    alignItems: 'center',
+  nameLeft: {
+    color: PURPLE_LIGHT,
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
-  playerInfo: {
-    alignItems: 'center',
-    marginBottom: 10,
+  nameRight: {
+    color: RED,
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
-  enemyInfo: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  fighterNamePlayer: {
-    color: '#e94560',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 3,
-  },
-  fighterNameEnemy: {
-    color: '#ff6b6b',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 3,
-  },
-  fighterLevel: {
-    color: '#888888',
-    fontSize: 11,
-  },
-  enemyRarity: {
-    color: '#ff6600',
+  levelTag: {
+    color: MUTED,
     fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+    fontWeight: '800',
+    marginTop: 2,
+    marginBottom: 8,
   },
-  // Gradient Health Bars
-  healthBarWrapper: {
-    width: '100%',
-    marginBottom: 15,
-  },
-  healthBarBg: {
-    height: 18,
-    backgroundColor: 'rgba(15, 52, 96, 0.8)',
-    borderRadius: 9,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(168, 85, 247, 0.4)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  healthBarFill: {
-    height: '100%',
-    borderRadius: 9,
-  },
-  healthStats: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  avatarFrame: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 3,
+    backgroundColor: PANEL_RAISED,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  avatarEmoji: {
+    fontSize: 38,
+  },
+  healthBg: {
+    width: '100%',
+    height: 10,
+    backgroundColor: '#232530',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  healthFill: {
+    height: '100%',
+    borderRadius: 6,
+  },
+  healthLabel: {
+    color: MUTED_LIGHT,
+    fontSize: 11,
+    fontWeight: '800',
     marginTop: 6,
   },
-  healthDroplet: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  healthValue: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  healthMax: {
-    color: '#888888',
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  // Character Frames
-  characterFrame: {
-    width: Math.min(width * 0.25, 120),
-    height: Math.min(width * 0.25, 120),
-    borderRadius: Math.min(width * 0.125, 60),
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  playerFrame: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
-    borderWidth: 3,
-    borderColor: '#a55eea',
-    shadowColor: '#a55eea',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  enemyFrame: {
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
-    borderWidth: 3,
-    borderColor: '#ff6b81',
-    shadowColor: '#ff6b81',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  characterGlow: {
-    width: Math.min(width * 0.18, 85),
-    height: Math.min(width * 0.18, 85),
-    borderRadius: Math.min(width * 0.09, 42),
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  characterEmoji: {
-    fontSize: Math.min(width * 0.13, 60),
-  },
-  rarityIndicator: {
-    position: 'absolute',
-    bottom: -10,
-  },
-  rarityDots: {
-    fontSize: 14,
-  },
-  enemyHealthStatus: {
-    position: 'absolute',
-    top: -15,
-  },
-  criticalText: {
-    fontSize: 10,
-    color: '#ff0000',
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  // VS Badge
-  vsBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
   vsCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(168, 85, 247, 0.2)',
-    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: GOLD,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#a55eea',
-    shadowColor: '#a55eea',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
+    justifyContent: 'center',
+    marginTop: 20,
+    marginHorizontal: 8,
   },
   vsText: {
-    color: '#a55eea',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 2,
+    color: INK,
+    fontSize: 13,
+    fontWeight: '900',
   },
-  vsIcon: {
-    fontSize: 24,
-    marginTop: 5,
+  questionCard: {
+    backgroundColor: PANEL,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: LINE,
   },
-  // Question Zone
-  questionZone: {
-    padding: 15,
-  },
-  questionPanel: {
-    padding: 20,
-  },
-  questionHeader: {
+  questionTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
-  categoryBadge: {
+  categoryPill: {
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 15,
   },
-  categoryText: {
-    color: '#000000',
+  categoryPillText: {
+    color: INK,
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
-  difficultyLabel: {
+  difficultyText: {
+    color: MUTED_LIGHT,
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontWeight: '900',
     letterSpacing: 1,
   },
-  questionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  questionMark: {
-    fontSize: 30,
-    marginRight: 12,
-  },
-  questionTextMain: {
-    flex: 1,
-    color: '#ffffff',
+  questionText: {
+    color: WHITE,
     fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '500',
+    lineHeight: 22,
+    fontWeight: '700',
   },
-  // Answer Grid
   answersGrid: {
-    gap: 12,
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 14,
   },
   answerButton: {
-    borderRadius: 15,
-    padding: 2,
+    width: (width - 32 - 12) / 2,
+    minHeight: 84,
+    borderRadius: 18,
+    borderWidth: 2,
+    padding: 12,
     marginBottom: 12,
-  },
-  answerGradient: {
-    borderRadius: 13,
-    padding: 15,
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  answerSelected: {
-    borderColor: '#a55eea',
-  },
-  answerCorrect: {
-    borderColor: '#2ed573',
-  },
-  answerWrong: {
-    borderColor: '#ff4757',
-  },
-  answerContent: {
-    flexDirection: 'row',
-    flex: 1,
     alignItems: 'center',
   },
   answerLetter: {
-    width: 35,
-    height: 35,
-    borderRadius: 17,
-    backgroundColor: 'rgba(168, 85, 247, 0.2)',
-    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: '#a55eea',
-  },
-  answerLetterSelected: {
-    borderColor: '#a55eea',
-    backgroundColor: 'rgba(168, 85, 247, 0.4)',
-  },
-  answerLetterCorrect: {
-    borderColor: '#2ed573',
-    backgroundColor: '#2ed573',
-  },
-  answerLetterWrong: {
-    borderColor: '#ff4757',
-    backgroundColor: '#ff4757',
+    justifyContent: 'center',
+    marginRight: 10,
   },
   letterText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: WHITE,
+    fontSize: 15,
+    fontWeight: '900',
   },
   answerText: {
     flex: 1,
-    color: '#a0a0a0',
-    fontSize: 14,
-    lineHeight: 20,
+    color: '#C7CBD4',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
   },
-  answerTextCorrect: {
-    color: '#2ecc71',
-    fontWeight: 'bold',
+  answerTextOnFill: {
+    color: WHITE,
   },
-  correctIcon: {
-    fontSize: 24,
-    marginLeft: 10,
-  },
-  wrongIcon: {
-    fontSize: 24,
-    marginLeft: 10,
-  },
-  // Result Popup
-  resultPopupContainer: {
-    marginTop: 15,
-  },
-  resultContent: {
-    alignItems: 'center',
-  },
-  resultEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  resultTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    letterSpacing: 2,
-  },
-  resultSubtitle: {
-    fontSize: 14,
-    color: '#a0a0a0',
-  },
-  // Battle Footer
-  battleFooter: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  footerStats: {
+  footer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: 14,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 14,
+    borderTopWidth: 1,
+    borderTopColor: LINE,
   },
-  statItem: {
-    flex: 1,
+  footerItem: {
     alignItems: 'center',
+    paddingHorizontal: 28,
   },
-  statDivider: {
-    width: 2,
-    height: 40,
-    backgroundColor: '#0f3460',
-    marginHorizontal: 10,
+  footerDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: LINE,
   },
-  statIconLarge: {
-    fontSize: 28,
-    marginBottom: 5,
-  },
-  statLabel: {
-    color: '#888888',
+  footerLabel: {
+    color: MUTED_LIGHT,
     fontSize: 10,
-    letterSpacing: 1,
-    marginBottom: 5,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
-  statValue: {
+  footerValue: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
 });
 

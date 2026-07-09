@@ -58,6 +58,7 @@ interface LevelNodeProps {
   nodeSize: number;
   nodeRadius: number;
   pulseAnim: Animated.Value;
+  isFinalBoss?: boolean;
   onPress: (levelId: number) => void;
 }
 
@@ -68,16 +69,45 @@ const getLevelStatus = (levelId: number, completedLevels: number[]): LevelNodeSt
   return 'locked';
 };
 
+// Zone day-ranges. Levels are grouped by their actual `day` value instead of
+// a fixed array index, so this keeps working correctly no matter how many
+// levels the game actually has (previously the slice boundaries assumed a
+// ~100-level roster; with fewer levels, wrong stages landed in the wrong
+// zone and — because the slice came from a reversed array — the earliest,
+// tappable stage ended up buried at the bottom of its zone instead of the
+// top, which is why nothing looked clickable).
+const ZONE_DEFINITIONS = [
+  { title: 'DAY 1–20 · OUTSET', theme: ZONE_THEME.outset, min: 1, max: 20 },
+  { title: 'DAY 21–40 · OUTBREAK', theme: ZONE_THEME.outbreak, min: 21, max: 40 },
+  { title: 'DAY 41–60 · DEAD ZONE', theme: ZONE_THEME.deadzone, min: 41, max: 60 },
+  { title: 'DAY 61–80 · WASTELAND', theme: ZONE_THEME.wasteland, min: 61, max: 80 },
+  { title: 'DAY 81–99 · APOCALYPSE', theme: ZONE_THEME.apocalypse, min: 81, max: 99 },
+] as const;
+
 const buildZoneSections = (allLevels: Level[]): ZoneSection[] => {
-  const reversedLevels = [...allLevels].reverse();
+  // Ascending by day: the earliest, easiest stage always renders first
+  // (top-left) inside its zone — that's the node the player can actually
+  // tap next, not the last one.
+  const sortedLevels = [...allLevels].sort((a, b) => a.day - b.day);
+
+  const finalBoss =
+    [...sortedLevels].reverse().find((level) => level.difficulty === 'boss') ??
+    sortedLevels[sortedLevels.length - 1];
+
+  const regularZones: ZoneSection[] = ZONE_DEFINITIONS.map((def) => ({
+    title: def.title,
+    theme: def.theme,
+    single: false,
+    slice: sortedLevels.filter(
+      (level) => level.id !== finalBoss?.id && level.day >= def.min && level.day <= def.max
+    ),
+  })).filter((zone) => zone.slice.length > 0);
+
+  if (!finalBoss) return regularZones;
 
   return [
-    { title: 'DAY 100 · JUDGMENT DAY', theme: ZONE_THEME.judgment, slice: reversedLevels.slice(0, 1), single: true },
-    { title: 'DAY 81–95 · APOCALYPSE', theme: ZONE_THEME.apocalypse, slice: reversedLevels.slice(1, 5), single: false },
-    { title: 'DAY 61–80 · WASTELAND', theme: ZONE_THEME.wasteland, slice: reversedLevels.slice(5, 9), single: false },
-    { title: 'DAY 41–60 · DEAD ZONE', theme: ZONE_THEME.deadzone, slice: reversedLevels.slice(9, 13), single: false },
-    { title: 'DAY 21–40 · OUTBREAK', theme: ZONE_THEME.outbreak, slice: reversedLevels.slice(13, 17), single: false },
-    { title: 'DAY 1–20 · OUTSET', theme: ZONE_THEME.outset, slice: reversedLevels.slice(17), single: false },
+    ...regularZones,
+    { title: 'DAY 100 · JUDGMENT DAY', theme: ZONE_THEME.judgment, slice: [finalBoss], single: true },
   ];
 };
 
@@ -88,10 +118,12 @@ const LevelNode: React.FC<LevelNodeProps> = ({
   nodeSize,
   nodeRadius,
   pulseAnim,
+  isFinalBoss,
   onPress,
 }) => {
   const isBoss = level.difficulty === 'boss';
   const isLocked = status === 'locked';
+  const isPlayable = status === 'current' || status === 'available';
 
   return (
     <Animated.View
@@ -111,6 +143,7 @@ const LevelNode: React.FC<LevelNodeProps> = ({
             backgroundColor: isLocked ? LOCKED_FILL : theme.color,
           },
           isBoss && styles.bossNode,
+          status === 'current' && styles.currentNode,
         ]}
         onPress={() => onPress(level.id)}
         disabled={isLocked}
@@ -134,9 +167,15 @@ const LevelNode: React.FC<LevelNodeProps> = ({
         </View>
       )}
 
+      {isPlayable && (
+        <View style={styles.playBadge}>
+          <Text style={styles.playBadgeText}>▶</Text>
+        </View>
+      )}
+
       <View style={[styles.nodeStatusBar, { backgroundColor: isLocked ? '#1E2027' : CARD_DARK, borderColor: isLocked ? LOCKED_COLOR : theme.color }]}>
         <Text style={[styles.nodeStatusText, { color: isLocked ? MUTED : theme.color }]}>
-          {isBoss ? 'FINAL BOSS' : `Day ${level.day}`}
+          {isBoss ? (isFinalBoss ? 'FINAL BOSS' : `BOSS · DAY ${level.day}`) : `Day ${level.day}`}
         </Text>
       </View>
     </Animated.View>
@@ -206,6 +245,7 @@ const LevelMapScreen: React.FC = () => {
 
   const renderConnector = (unlocked: boolean, theme: ZoneTheme) => (
     <View style={styles.connectorTrack}>
+      <View style={[styles.connectorLine, { backgroundColor: unlocked ? theme.color : LOCKED_COLOR }]} />
       {[0, 1, 2].map((item) => (
         <View
           key={item}
@@ -258,9 +298,6 @@ const LevelMapScreen: React.FC = () => {
           bounces={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.mascotIntroSection}>
-            <Mascot emotion="thinking" size="medium" message="เลือกเส้นทางของคุณ!" />
-          </View>
 
           <View style={styles.introCard}>
             <Text style={styles.introTitle}>SURVIVAL STORY</Text>
@@ -272,6 +309,7 @@ const LevelMapScreen: React.FC = () => {
             {zones.map((zone) => {
               const clearedInZone = zone.slice.filter((level) => player.completedLevels.includes(level.id)).length;
               const zoneUnlocked = zone.slice.some((level) => getLevelStatus(level.id, player.completedLevels) !== 'locked');
+              const isCurrentZone = zone.slice.some((level) => getLevelStatus(level.id, player.completedLevels) === 'current');
 
               return (
                 <View key={zone.title} style={styles.windingSection}>
@@ -291,6 +329,11 @@ const LevelMapScreen: React.FC = () => {
                       <Text style={[styles.windingSectionTitle, { color: zoneUnlocked ? zone.theme.onColor : MUTED }]}>{zone.title}</Text>
                       <Text style={[styles.zoneProgressText, { color: zoneUnlocked ? zone.theme.onColor : MUTED }]}>{clearedInZone}/{zone.slice.length} cleared</Text>
                     </View>
+                    {isCurrentZone && (
+                      <View style={styles.startHereBadge}>
+                        <Text style={styles.startHereBadgeText}>START HERE</Text>
+                      </View>
+                    )}
                   </View>
 
                   {zone.single ? (
@@ -309,6 +352,7 @@ const LevelMapScreen: React.FC = () => {
                             nodeSize={nodeSize}
                             nodeRadius={nodeRadius}
                             pulseAnim={pulseAnim}
+                            isFinalBoss
                             onPress={handleLevelSelect}
                           />
                         );
@@ -519,6 +563,20 @@ const styles = StyleSheet.create({
   zoneIcon: {
     fontSize: 18,
   },
+  startHereBadge: {
+    backgroundColor: INK,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: INK,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  startHereBadgeText: {
+    color: WHITE,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
   zoneTitleBlock: {
     flex: 1,
   },
@@ -559,6 +617,13 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
   },
+  connectorLine: {
+    position: 'absolute',
+    width: 4,
+    height: '100%',
+    borderRadius: 2,
+    opacity: 0.5,
+  },
   connectorDot: {
     width: 6,
     height: 6,
@@ -576,6 +641,32 @@ const styles = StyleSheet.create({
   },
   bossNode: {
     borderWidth: STROKE_THICK + 1,
+  },
+  currentNode: {
+    shadowColor: GOLD,
+    shadowOpacity: 0.9,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 10,
+  },
+  playBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: GOLD,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: INK,
+  },
+  playBadgeText: {
+    color: INK,
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 2,
   },
   nodeEmoji: {
     fontSize: 24,

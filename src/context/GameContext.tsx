@@ -43,7 +43,7 @@ interface GameContextType {
   selectCharacter: (characterId: number) => Promise<void>;
   upgradeCharacter: (characterId: number) => Promise<void>;
   startLevel: (levelId: number) => void;
-  endBattle: (victory: boolean) => Promise<void>;
+  endBattle: (victory: boolean, rewardMultiplier?: number) => Promise<void>;
   answerQuestion: (isCorrect: boolean) => void;
   claimDailyReward: () => Promise<void>;
   resetGame: () => Promise<void>;
@@ -228,20 +228,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const endBattle = async (victory: boolean) => {
+  const endBattle = async (victory: boolean, rewardMultiplier: number = 1) => {
     if (!currentLevel) return;
 
     if (victory) {
+      const clampedMultiplier = Math.min(1, Math.max(0, rewardMultiplier));
+
       setPlayer((prev) => {
         const newCompletedLevels = prev.completedLevels.includes(currentLevel.id)
           ? prev.completedLevels
           : [...prev.completedLevels, currentLevel.id];
 
         const newHighestLevel = Math.max(prev.highestLevelCompleted, currentLevel.id);
-        const newExp = prev.experience + currentLevel.rewardExp;
+        const earnedExp = Math.round(currentLevel.rewardExp * clampedMultiplier);
+        const earnedCoins = Math.round(currentLevel.rewardCoins * clampedMultiplier);
+        const newExp = prev.experience + earnedExp;
         const newLevel = Math.floor(newExp / 100) + 1;
-        const newCoins = prev.coins + currentLevel.rewardCoins;
-        const newScore = prev.totalScore + currentLevel.rewardCoins * 10;
+        const newCoins = prev.coins + earnedCoins;
+        const newScore = prev.totalScore + earnedCoins * 10;
 
         const nextPlayer = {
           ...prev,
